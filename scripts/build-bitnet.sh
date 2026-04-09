@@ -28,7 +28,7 @@ cd "$TARGET_DIR"
 
 # Patch setup_env.py if needed
 if [ -f "setup_env.py" ]; then
-    # 1. Swap compiler if CC is set (clang has const-correctness errors on Linux)
+    # 1. Swap compiler if CC is set
     if [ -n "${CC:-}" ]; then
         echo "    Patching compiler to CC=$CC CXX=${CXX:-${CC}++}"
         sed -i.bak \
@@ -36,6 +36,19 @@ if [ -f "setup_env.py" ]; then
             -e "s|-DCMAKE_CXX_COMPILER=clang++|-DCMAKE_CXX_COMPILER=${CXX:-${CC}++}|g" \
             setup_env.py
     fi
+
+    # 2. Suppress upstream const-correctness error in bitnet.cpp
+    #    The code has: int8_t *y_col = y + ... (where y is const int8_t*)
+    #    clang treats this as a hard error. gcc with -fpermissive downgrades it.
+    echo "    Patching cmake flags for permissive compilation"
+    if [ "${CC:-clang}" = "gcc" ]; then
+        EXTRA_FLAGS="-fpermissive"
+    else
+        EXTRA_FLAGS="-Wno-incompatible-pointer-types-discards-qualifiers"
+    fi
+    sed -i.bak3 \
+        "s|\"-DCMAKE_CXX_COMPILER=|\"-DCMAKE_CXX_FLAGS=${EXTRA_FLAGS}\", \"-DCMAKE_C_FLAGS=${EXTRA_FLAGS}\", \"-DCMAKE_CXX_COMPILER=|" \
+        setup_env.py
 
     # 2. Skip model download in CI (we only need binaries, not weights)
     if [ "${BITNET_SKIP_MODEL_DOWNLOAD:-}" = "1" ]; then
