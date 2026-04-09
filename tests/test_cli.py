@@ -35,7 +35,7 @@ class TestHelp:
     def test_help_lists_all_commands(self, runner: CliRunner) -> None:
         result = runner.invoke(cli, ["--help"])
         assert result.exit_code == 0
-        for cmd in ["setup", "pull", "serve", "run", "models", "list", "rm", "status"]:
+        for cmd in ["setup", "pull", "serve", "run", "models", "list", "rm", "status", "bench"]:
             assert cmd in result.output
 
     def test_verbose_flag_accepted(self, runner: CliRunner) -> None:
@@ -355,6 +355,28 @@ class TestRunCommand:
         assert mock_bg_server.call_args[0][0] == "2B-4T"
         mock_wait.assert_called_once()
         mock_repl.assert_called_once_with(model="2B-4T", api_url="http://127.0.0.1:8081")
+
+
+# ──────────────────────────────────────────────────────────────
+# bench command
+# ──────────────────────────────────────────────────────────────
+
+
+class TestBenchCommand:
+    def test_bench_help(self, runner: CliRunner) -> None:
+        result = runner.invoke(cli, ["bench", "--help"])
+        assert result.exit_code == 0
+        assert "benchmark" in result.output.lower() or "bench" in result.output.lower()
+        assert "--json" in result.output
+        assert "--compare" in result.output
+
+    def test_bench_requires_model(self, runner: CliRunner) -> None:
+        result = runner.invoke(cli, ["bench"])
+        assert result.exit_code != 0
+
+    def test_bench_unknown_model(self, runner: CliRunner) -> None:
+        result = runner.invoke(cli, ["bench", "nonexistent-xyz"])
+        assert result.exit_code != 0
 
 
 # ──────────────────────────────────────────────────────────────

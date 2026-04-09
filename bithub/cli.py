@@ -349,6 +349,84 @@ def rm(model_name, yes):
 
 
 @cli.command()
+@click.argument("model_names", nargs=-1, required=True)
+@click.option("--port", default=8090, hidden=True, help="Port for benchmark server")
+@click.option("--threads", "-t", default=_DEFAULT_THREADS, show_default=True,
+              help="Number of CPU threads")
+@click.option("--context-size", "-c", default=2048, show_default=True,
+              help="Context window size")
+@click.option("--json-output", "--json", "json_output", is_flag=True, help="Output results as JSON")
+@click.option("--compare", is_flag=True, help="Show side-by-side comparison")
+def bench(model_names, port, threads, context_size, json_output, compare):
+    """Benchmark model inference speed.
+
+    Runs fixed prompts (short, medium, long) and measures tokens/sec,
+    time to first token, and total time.
+
+    \b
+    Examples:
+        bithub bench 2B-4T
+        bithub bench 2B-4T --json
+        bithub bench 2B-4T falcon3-3B --compare
+    """
+    import json as json_mod
+    if not _ensure_engine_ready():
+        raise SystemExit(1)
+
+    for name in model_names:
+        if not _ensure_model_ready(name):
+            raise SystemExit(1)
+
+    from bithub.server import start_background_server, wait_for_server
+    from bithub.bench import (
+        run_benchmark, display_results, display_comparison,
+        save_results,
+    )
+
+    all_results = {}
+
+    for i, name in enumerate(model_names):
+        model_port = port + (i * 2)
+        api_url = f"http://127.0.0.1:{model_port}"
+
+        console.print(f"\n[bold]Benchmarking {name}...[/bold]")
+        console.print(f"[dim]Starting server on port {model_port}...[/dim]")
+
+        start_background_server(
+            name, host="127.0.0.1", port=model_port,
+            threads=threads, context_size=context_size,
+        )
+
+        if not wait_for_server(api_url):
+            console.print(f"[red]Server failed to start for {name}.[/red]")
+            continue
+
+        results = run_benchmark(api_url, name)
+        all_results[name] = results
+
+        bench_data = {
+            "model": name,
+            "threads": threads,
+            "context_size": context_size,
+            "results": results,
+        }
+        saved_path = save_results(name, bench_data)
+        console.print(f"[dim]Results saved to {saved_path}[/dim]")
+
+        if not compare:
+            if json_output:
+                console.print(json_mod.dumps(bench_data, indent=2))
+            else:
+                display_results(name, results)
+
+    if compare and len(all_results) > 1:
+        if json_output:
+            console.print(json_mod.dumps(all_results, indent=2))
+        else:
+            display_comparison(all_results)
+
+
+@cli.command()
 def status():
     """Show the current state of bithub."""
     from bithub.builder import is_bitnet_cpp_built, get_inference_binary, get_server_binary
