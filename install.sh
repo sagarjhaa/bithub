@@ -97,7 +97,7 @@ main() {
 
     local tmpdir
     tmpdir="$(mktemp -d)"
-    trap 'rm -rf "$tmpdir"' EXIT
+    trap 'rm -rf "${tmpdir:-}"' EXIT
 
     curl -fSL "$download_url" -o "$tmpdir/bithub-binaries.tar.gz"
 
