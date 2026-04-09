@@ -19,12 +19,12 @@ import time
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional, Union
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse, JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from rich.console import Console
 
 from bithub.builder import get_server_binary, get_inference_binary, is_bitnet_cpp_built
@@ -47,12 +47,18 @@ class ChatMessage(BaseModel):
 
 class ChatCompletionRequest(BaseModel):
     model: str
-    messages: list[ChatMessage]
-    temperature: Optional[float] = 0.7
-    top_p: Optional[float] = 0.9
-    max_tokens: Optional[int] = 512
+    messages: List[ChatMessage]
+    temperature: Optional[float] = Field(default=0.7, ge=0.0, le=2.0)
+    top_p: Optional[float] = Field(default=0.9, ge=0.0, le=1.0)
+    max_tokens: Optional[int] = Field(default=512, gt=0)
     stream: Optional[bool] = False
-    stop: Optional[list[str] | str] = None
+    stop: Optional[Union[List[str], str]] = None
+
+    @validator("messages")
+    def messages_must_not_be_empty(cls, v):
+        if len(v) == 0:
+            raise ValueError("messages must not be empty")
+        return v
 
 
 class ChatCompletionChoice(BaseModel):
@@ -72,7 +78,7 @@ class ChatCompletionResponse(BaseModel):
     object: str = "chat.completion"
     created: int = 0
     model: str = ""
-    choices: list[ChatCompletionChoice] = []
+    choices: List[ChatCompletionChoice] = []
     usage: UsageInfo = Field(default_factory=UsageInfo)
 
 
