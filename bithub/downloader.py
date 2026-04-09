@@ -7,6 +7,7 @@ Uses huggingface_hub for reliable, resumable downloads.
 
 import shutil
 from pathlib import Path
+from typing import List, Optional
 
 from huggingface_hub import hf_hub_download, HfApi
 from huggingface_hub.utils import (
@@ -83,7 +84,7 @@ def is_model_downloaded(model_name: str) -> bool:
     return len(gguf_files) > 0
 
 
-def get_downloaded_models() -> list[dict]:
+def get_downloaded_models() -> List[dict]:
     """Return info about all downloaded models."""
     ensure_dirs()
     downloaded = []
@@ -105,11 +106,35 @@ def get_downloaded_models() -> list[dict]:
     return downloaded
 
 
-def get_model_gguf_path(model_name: str) -> Path | None:
+def get_model_gguf_path(model_name: str) -> Optional[Path]:
     """Return the path to a downloaded model's GGUF file, or None."""
     model_dir = MODELS_DIR / model_name
     gguf_files = list(model_dir.glob("*.gguf"))
     return gguf_files[0] if gguf_files else None
+
+
+def _parse_size_mb(size_mb: int) -> int:
+    """Convert size in MB to bytes."""
+    return size_mb * 1024 * 1024
+
+
+def _check_disk_space(target_dir: Path, size_mb: int) -> None:
+    """Abort if disk space is insufficient for the download."""
+    required = _parse_size_mb(size_mb)
+    if required == 0:
+        return
+    # Ensure the directory (or its parent) exists for disk_usage check
+    check_path = target_dir if target_dir.exists() else target_dir.parent
+    usage = shutil.disk_usage(check_path)
+    buffer = 1024**3  # 1GB buffer
+    if usage.free < required + buffer:
+        free_gb = usage.free / 1024**3
+        req_gb = required / 1024**3
+        console.print(
+            f"[red]Insufficient disk space.[/red] "
+            f"Need {req_gb:.1f}GB, only {free_gb:.1f}GB free at {target_dir}"
+        )
+        raise SystemExit(1)
 
 
 def download_model(model_name: str, force: bool = False) -> Path:
@@ -134,6 +159,9 @@ def download_model(model_name: str, force: bool = False) -> Path:
         console.print(f"[red]Unknown model: {model_name}[/red]")
         console.print("Run [bold]bithub models[/bold] to see available models.")
         raise SystemExit(1)
+
+    # Check disk space before downloading
+    _check_disk_space(MODELS_DIR, info.get("size_mb", 0))
 
     model_dir = MODELS_DIR / model_name
     repo_id = info["hf_repo"]

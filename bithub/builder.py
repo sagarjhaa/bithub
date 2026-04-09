@@ -9,6 +9,7 @@ so the user doesn't have to do it manually.
 import subprocess
 import sys
 from pathlib import Path
+from typing import List, Optional
 
 from rich.console import Console
 
@@ -31,7 +32,7 @@ def is_bitnet_cpp_built() -> bool:
     return inference_bin is not None
 
 
-def _find_inference_binary() -> Path | None:
+def _find_inference_binary() -> Optional[Path]:
     """Find the bitnet.cpp inference binary."""
     candidates = [
         BITNET_CPP_DIR / "build" / "bin" / "llama-cli",
@@ -44,7 +45,7 @@ def _find_inference_binary() -> Path | None:
     return None
 
 
-def _find_server_binary() -> Path | None:
+def _find_server_binary() -> Optional[Path]:
     """Find the bitnet.cpp server binary specifically."""
     candidates = [
         BITNET_CPP_DIR / "build" / "bin" / "llama-server",
@@ -56,17 +57,17 @@ def _find_server_binary() -> Path | None:
     return None
 
 
-def get_inference_binary() -> Path | None:
+def get_inference_binary() -> Optional[Path]:
     """Return path to the inference CLI binary, or None if not built."""
     return _find_inference_binary()
 
 
-def get_server_binary() -> Path | None:
+def get_server_binary() -> Optional[Path]:
     """Return path to the server binary, or None if not built."""
     return _find_server_binary()
 
 
-def _run_command(cmd: list[str], cwd: Path | None = None, desc: str = "") -> bool:
+def _run_command(cmd: List[str], cwd: Optional[Path] = None, desc: str = "") -> bool:
     """Run a shell command with live output."""
     if desc:
         console.print(f"  [dim]{desc}[/dim]")
@@ -89,7 +90,7 @@ def _run_command(cmd: list[str], cwd: Path | None = None, desc: str = "") -> boo
         return False
 
 
-def _check_prerequisites() -> list[str]:
+def _check_prerequisites() -> List[str]:
     """Check for required build tools and return list of missing ones."""
     missing = []
     for tool in ["git", "cmake", "python3"]:

@@ -11,18 +11,18 @@ SAMPLE_REGISTRY = {
     "models": {
         "test-model": {
             "name": "Test Model",
-            "repo_id": "test-org/test-model-gguf",
+            "hf_repo": "test-org/test-model-gguf",
             "description": "A test model for unit tests",
             "parameters": "1B",
-            "size": "500MB",
+            "size_mb": 500,
             "quant_type": "i2_s",
         },
         "test-model-2": {
             "name": "Test Model 2",
-            "repo_id": "test-org/test-model-2-gguf",
+            "hf_repo": "test-org/test-model-2-gguf",
             "description": "Another test model",
             "parameters": "3B",
-            "size": "2GB",
+            "size_mb": 2000,
             "quant_type": "i2_s",
         },
     }

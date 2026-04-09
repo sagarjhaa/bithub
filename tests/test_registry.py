@@ -48,7 +48,7 @@ class TestGetModelInfo:
             info = get_model_info("test-model")
         assert info is not None
         assert info["name"] == "Test Model"
-        assert info["repo_id"] == "test-org/test-model-gguf"
+        assert info["hf_repo"] == "test-org/test-model-gguf"
 
     def test_returns_none_for_unknown_model(self, sample_registry_file: Path) -> None:
         with patch("bithub.registry.REGISTRY_PATH", sample_registry_file):
