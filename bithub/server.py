@@ -153,6 +153,17 @@ def run_interactive(
     try:
         process = subprocess.Popen(cmd)
         process.wait()
+        if process.returncode != 0:
+            console.print(
+                f"\n[red]Process exited with code {process.returncode}.[/red] "
+                f"Run [bold]bithub status[/bold] to check your setup."
+            )
+    except FileNotFoundError:
+        console.print(
+            "[red]Inference binary not found.[/red] "
+            "Run [bold]bithub setup[/bold] to rebuild."
+        )
+        raise SystemExit(1)
     except KeyboardInterrupt:
         console.print("\n[green]Chat ended.[/green]")
         process.send_signal(signal.SIGTERM)
