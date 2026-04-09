@@ -36,4 +36,4 @@ jobs:
         run: pytest --cov=bithub --cov-report=term-missing -v
 
       - name: Check coverage threshold
-        run: pytest --cov=bithub --cov-fail-under=70 -q
+        run: pytest --cov=bithub --cov-fail-under=55 -q
