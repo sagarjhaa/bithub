@@ -50,7 +50,7 @@ if [ -f "setup_env.py" ]; then
 
     ARCH_CMAKE_FLAG=""
     if [ "$(uname -s)" = "Darwin" ] && [ "${BITNET_TARGET_ARCH:-}" = "x86_64" ]; then
-        ARCH_CMAKE_FLAG="\"-DCMAKE_OSX_ARCHITECTURES=x86_64\", "
+        ARCH_CMAKE_FLAG="\"-DCMAKE_OSX_ARCHITECTURES=x86_64\", \"-DGGML_NATIVE=OFF\", "
         sed -i.bak4 's/ARCH_ALIAS\[platform.machine()\]/"x86_64"/g' setup_env.py
     fi
 
