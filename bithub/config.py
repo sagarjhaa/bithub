@@ -44,3 +44,55 @@ def ensure_dirs():
     """Create required directories if they don't exist."""
     BITHUB_HOME.mkdir(parents=True, exist_ok=True)
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+import sys
+import copy
+import logging
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    try:
+        import tomli as tomllib
+    except ImportError:
+        tomllib = None  # type: ignore[assignment]
+
+_DEFAULT_CONFIG: dict = {
+    "server": {
+        "port": DEFAULT_PORT,
+        "host": DEFAULT_HOST,
+        "threads": get_default_threads(),
+    },
+    "models": {
+        "default": None,
+        "directory": str(MODELS_DIR),
+    },
+    "download": {
+        "check_disk_space": True,
+        "min_free_gb": 5,
+    },
+}
+
+
+def load_config() -> dict:
+    """Load config from ~/.bithub/config.toml, merged over defaults.
+
+    Returns defaults if file missing, unreadable, or tomli not installed.
+    """
+    config = copy.deepcopy(_DEFAULT_CONFIG)
+    config_path = BITHUB_HOME / "config.toml"
+    if not config_path.exists():
+        return config
+    if tomllib is None:
+        logging.warning("Install 'tomli' for config file support on Python <3.11")
+        return config
+    try:
+        with open(config_path, "rb") as f:
+            user_config = tomllib.load(f)
+        for section, values in user_config.items():
+            if section in config and isinstance(values, dict):
+                config[section].update(values)
+    except Exception:
+        logging.warning("Failed to parse %s, using defaults", config_path)
+    return config
