@@ -1,15 +1,15 @@
 """
-Server — start bitnet.cpp's built-in server for a model.
+Server — start bitnet-hub with an OpenAI-compatible API.
 
-bitnet.cpp (via llama.cpp) includes a server binary that provides
-an OpenAI-compatible API out of the box. This module manages
-starting and stopping that server process.
+Two modes:
+  1. `serve` — starts a FastAPI server that proxies to the bitnet.cpp
+     backend, providing /v1/chat/completions and /v1/models.
+  2. `run` — interactive terminal chat via llama-cli.
 """
 
 import signal
 import subprocess
 import sys
-import time
 from pathlib import Path
 
 from rich.console import Console
@@ -17,30 +17,16 @@ from rich.console import Console
 from bitnet_hub.builder import get_server_binary, get_inference_binary, is_bitnet_cpp_built
 from bitnet_hub.config import DEFAULT_HOST, DEFAULT_PORT
 from bitnet_hub.downloader import get_model_gguf_path, is_model_downloaded
+from bitnet_hub.registry import get_model_info
 
 console = Console()
 
 
-def start_server(
-    model_name: str,
-    host: str = DEFAULT_HOST,
-    port: int = DEFAULT_PORT,
-    threads: int = 2,
-    context_size: int = 2048,
-) -> None:
+def _preflight_check(model_name: str) -> Path:
     """
-    Start the bitnet.cpp server for a given model.
-
-    This blocks until the server is stopped (Ctrl+C).
-
-    Args:
-        model_name: Short name from registry
-        host: Address to bind to
-        port: Port to listen on
-        threads: Number of CPU threads
-        context_size: Context window size in tokens
+    Run common checks before serving or chatting.
+    Returns the GGUF path on success, exits on failure.
     """
-    # Pre-flight checks
     if not is_bitnet_cpp_built():
         console.print("[red]bitnet.cpp is not built yet.[/red]")
         console.print("Run [bold]bitnet-hub setup[/bold] first to clone and build the engine.")
@@ -56,73 +42,73 @@ def start_server(
         console.print(f"[red]Could not find GGUF file for {model_name}.[/red]")
         raise SystemExit(1)
 
-    # Find the server binary (prefer llama-server, fall back to llama-cli --server)
-    server_bin = get_server_binary()
-    cli_bin = get_inference_binary()
+    return gguf_path
 
-    if server_bin:
-        cmd = [
-            str(server_bin),
-            "-m", str(gguf_path),
-            "--host", host,
-            "--port", str(port),
-            "-t", str(threads),
-            "-c", str(context_size),
-        ]
-    elif cli_bin:
-        # Fallback: use llama-cli in server mode if available
-        cmd = [
-            str(cli_bin),
-            "-m", str(gguf_path),
-            "--host", host,
-            "--port", str(port),
-            "-t", str(threads),
-            "-c", str(context_size),
-            "--server",
-        ]
-    else:
-        console.print("[red]No server binary found.[/red]")
-        console.print("bitnet.cpp may not have built correctly.")
-        console.print("Run [bold]bitnet-hub setup --force[/bold] to rebuild.")
-        raise SystemExit(1)
 
-    # Launch
+def start_server(
+    model_name: str,
+    host: str = DEFAULT_HOST,
+    port: int = DEFAULT_PORT,
+    threads: int = 2,
+    context_size: int = 2048,
+) -> None:
+    """
+    Start the bitnet-hub API server (FastAPI + bitnet.cpp backend).
+
+    This provides OpenAI-compatible endpoints:
+        GET  /v1/models
+        POST /v1/chat/completions (streaming + non-streaming)
+        GET  /health
+
+    Args:
+        model_name: Short name from registry
+        host: Address to bind to
+        port: Port to listen on
+        threads: Number of CPU threads
+        context_size: Context window size in tokens
+    """
+    gguf_path = _preflight_check(model_name)
+
+    # Get model info for display
+    info = get_model_info(model_name)
+    display_name = info["name"] if info else model_name
+
     console.print(f"\n[bold green]Starting bitnet-hub server[/bold green]")
-    console.print(f"  Model:    {model_name}")
+    console.print(f"  Model:    {display_name}")
     console.print(f"  GGUF:     {gguf_path.name}")
     console.print(f"  Address:  http://{host}:{port}")
     console.print(f"  Threads:  {threads}")
     console.print(f"  Context:  {context_size} tokens")
     console.print()
-    console.print(f"  [bold]OpenAI-compatible endpoint:[/bold]")
-    console.print(f"  http://{host}:{port}/v1/chat/completions")
+    console.print(f"  [bold]Endpoints:[/bold]")
+    console.print(f"    POST http://{host}:{port}/v1/chat/completions")
+    console.print(f"    GET  http://{host}:{port}/v1/models")
+    console.print(f"    GET  http://{host}:{port}/health")
+    console.print()
+    console.print("  [bold]Connect from Python:[/bold]")
+    console.print(f'    client = openai.OpenAI(base_url="http://{host}:{port}/v1", api_key="not-needed")')
     console.print()
     console.print("[dim]Press Ctrl+C to stop the server[/dim]\n")
 
-    # Run the server process, forwarding output
+    # Use the internal backend port (one above the user-facing port)
+    backend_port = port + 1
+
+    # Create and run the FastAPI app
+    from bitnet_hub.api import create_app
+    import uvicorn
+
+    app = create_app(
+        model_name=model_name,
+        gguf_path=gguf_path,
+        threads=threads,
+        context_size=context_size,
+        backend_port=backend_port,
+    )
+
     try:
-        process = subprocess.Popen(
-            cmd,
-            stdout=sys.stdout,
-            stderr=sys.stderr,
-        )
-
-        # Wait for the process, handling Ctrl+C gracefully
-        process.wait()
-
+        uvicorn.run(app, host=host, port=port, log_level="warning")
     except KeyboardInterrupt:
-        console.print("\n[yellow]Shutting down server...[/yellow]")
-        process.send_signal(signal.SIGTERM)
-        try:
-            process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait()
-        console.print("[green]Server stopped.[/green]")
-
-    except Exception as e:
-        console.print(f"[red]Server error: {e}[/red]")
-        raise SystemExit(1)
+        console.print("\n[green]Server stopped.[/green]")
 
 
 def run_interactive(
@@ -140,27 +126,17 @@ def run_interactive(
         threads: Number of CPU threads
         context_size: Context window size
     """
-    if not is_bitnet_cpp_built():
-        console.print("[red]bitnet.cpp is not built yet.[/red]")
-        console.print("Run [bold]bitnet-hub setup[/bold] first.")
-        raise SystemExit(1)
-
-    if not is_model_downloaded(model_name):
-        console.print(f"[red]Model {model_name} is not downloaded.[/red]")
-        console.print(f"Run [bold]bitnet-hub pull {model_name}[/bold] first.")
-        raise SystemExit(1)
-
-    gguf_path = get_model_gguf_path(model_name)
-    if not gguf_path:
-        console.print(f"[red]Could not find GGUF file for {model_name}.[/red]")
-        raise SystemExit(1)
+    gguf_path = _preflight_check(model_name)
 
     cli_bin = get_inference_binary()
     if not cli_bin:
         console.print("[red]No inference binary found.[/red]")
         raise SystemExit(1)
 
-    console.print(f"\n[bold green]Chat with {model_name}[/bold green]")
+    info = get_model_info(model_name)
+    display_name = info["name"] if info else model_name
+
+    console.print(f"\n[bold green]Chat with {display_name}[/bold green]")
     console.print(f"  Using: {gguf_path.name}")
     console.print(f"  Threads: {threads}")
     console.print("[dim]Press Ctrl+C to exit[/dim]\n")
