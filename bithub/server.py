@@ -12,6 +12,7 @@ import subprocess
 import sys
 import threading
 from pathlib import Path
+from typing import List, Optional
 
 import httpx
 
@@ -49,14 +50,16 @@ def _preflight_check(model_name: str) -> Path:
 
 
 def start_server(
-    model_name: str,
+    model_names: Optional[List[str]] = None,
+    model_name: Optional[str] = None,  # backwards compat
     host: str = DEFAULT_HOST,
     port: int = DEFAULT_PORT,
     threads: int = 2,
     context_size: int = 2048,
+    lazy: bool = False,
 ) -> None:
     """
-    Start the bithub API server (FastAPI + bitnet.cpp backend).
+    Start the bithub API server with one or more models.
 
     This provides OpenAI-compatible endpoints:
         GET  /v1/models
@@ -64,48 +67,49 @@ def start_server(
         GET  /health
 
     Args:
-        model_name: Short name from registry
+        model_names: List of short names from registry
+        model_name: Single model name (backwards compat)
         host: Address to bind to
         port: Port to listen on
-        threads: Number of CPU threads
+        threads: Number of CPU threads per model
         context_size: Context window size in tokens
+        lazy: If True, only load models on first request
     """
-    gguf_path = _preflight_check(model_name)
+    # Handle both old and new calling conventions
+    if model_names is None:
+        if model_name:
+            model_names = [model_name]
+        else:
+            console.print("[red]No models specified.[/red]")
+            raise SystemExit(1)
 
-    # Get model info for display
-    info = get_model_info(model_name)
-    display_name = info["name"] if info else model_name
-
-    console.print(f"\n[bold green]Starting bithub server[/bold green]")
-    console.print(f"  Model:    {display_name}")
-    console.print(f"  GGUF:     {gguf_path.name}")
-    console.print(f"  Address:  http://{host}:{port}")
-    console.print(f"  Threads:  {threads}")
-    console.print(f"  Context:  {context_size} tokens")
-    console.print()
-    console.print(f"  [bold]Endpoints:[/bold]")
-    console.print(f"    POST http://{host}:{port}/v1/chat/completions")
-    console.print(f"    GET  http://{host}:{port}/v1/models")
-    console.print(f"    GET  http://{host}:{port}/health")
-    console.print()
-    console.print("  [bold]Connect from Python:[/bold]")
-    console.print(f'    client = openai.OpenAI(base_url="http://{host}:{port}/v1", api_key="not-needed")')
-    console.print()
-    console.print("[dim]Press Ctrl+C to stop the server[/dim]\n")
-
-    # Use the internal backend port (one above the user-facing port)
-    backend_port = port + 1
-
-    # Create and run the FastAPI app
+    from bithub.model_manager import ModelManager
     from bithub.api import create_app
     import uvicorn
 
+    backend_base_port = port + 1
+    manager = ModelManager(base_port=backend_base_port, max_models=len(model_names))
+
+    for name in model_names:
+        gguf_path = _preflight_check(name)
+        manager.register(name, gguf_path, threads=threads, context_size=context_size)
+
+    console.print(f"\n[bold green]Starting bithub server[/bold green]")
+    for name in model_names:
+        info = get_model_info(name)
+        display_name = info["name"] if info else name
+        console.print(f"  Model:    {display_name}")
+    console.print(f"  Address:  http://{host}:{port}")
+    console.print(f"  Threads:  {threads} per model")
+    if len(model_names) > 1:
+        console.print(f"  Mode:     {'lazy' if lazy else 'eager'} loading")
+    console.print()
+    console.print("[dim]Press Ctrl+C to stop the server[/dim]\n")
+
     app = create_app(
-        model_name=model_name,
-        gguf_path=gguf_path,
-        threads=threads,
-        context_size=context_size,
-        backend_port=backend_port,
+        model_name=model_names[0],
+        gguf_path=_preflight_check(model_names[0]),
+        manager=manager,
     )
 
     try:

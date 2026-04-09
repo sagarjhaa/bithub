@@ -294,7 +294,30 @@ class TestServeCommand:
             result = runner.invoke(cli, ["serve", "2B-4T"])
         mock_start.assert_called_once()
         call_kwargs = mock_start.call_args
-        assert call_kwargs[0][0] == "2B-4T"  # model_name positional arg
+        assert call_kwargs[1]["model_names"] == ["2B-4T"]
+
+    def test_serve_multiple_models(self, runner: CliRunner) -> None:
+        mock_start = MagicMock()
+        with (
+            patch("bithub.builder.is_bitnet_cpp_built", return_value=True),
+            patch("bithub.downloader.is_model_downloaded", return_value=True),
+            patch("bithub.server.start_server", mock_start),
+        ):
+            result = runner.invoke(cli, ["serve", "2B-4T", "falcon3-3B"])
+        mock_start.assert_called_once()
+        call_kwargs = mock_start.call_args
+        assert call_kwargs[1]["model_names"] == ["2B-4T", "falcon3-3B"]
+
+    def test_serve_lazy_flag(self, runner: CliRunner) -> None:
+        mock_start = MagicMock()
+        with (
+            patch("bithub.builder.is_bitnet_cpp_built", return_value=True),
+            patch("bithub.downloader.is_model_downloaded", return_value=True),
+            patch("bithub.server.start_server", mock_start),
+        ):
+            result = runner.invoke(cli, ["serve", "2B-4T", "--lazy"])
+        mock_start.assert_called_once()
+        assert mock_start.call_args[1]["lazy"] is True
 
 
 # ──────────────────────────────────────────────────────────────

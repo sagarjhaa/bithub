@@ -169,33 +169,40 @@ def setup(force):
 
 
 @cli.command()
-@click.argument("model_name")
+@click.argument("model_names", nargs=-1, required=True)
 @click.option("--host", default="127.0.0.1", help="Host to bind to")
 @click.option("--port", default=8080, help="Port to listen on")
 @click.option("--threads", "-t", default=_DEFAULT_THREADS, show_default=True,
-              help="Number of CPU threads")
+              help="Number of CPU threads per model")
 @click.option("--context-size", "-c", default=2048, show_default=True,
               help="Context window size")
-def serve(model_name, host, port, threads, context_size):
-    """Start an OpenAI-compatible API server for a model.
+@click.option("--lazy", is_flag=True, help="Only load models on first request")
+def serve(model_names, host, port, threads, context_size, lazy):
+    """Start an OpenAI-compatible API server.
 
-    Any app that speaks the OpenAI API can connect — Open WebUI,
-    Cursor, or your own scripts.
+    Accepts one or more model names. Requests are routed by the 'model'
+    field in the API request.
 
     \b
     Examples:
         bithub serve 2B-4T
-        bithub serve 2B-4T --port 9000
-        bithub serve falcon3-3B -t 4 -c 4096
+        bithub serve 2B-4T falcon3-3B
+        bithub serve 2B-4T falcon3-3B --lazy
     """
     if not _ensure_engine_ready():
         raise SystemExit(1)
-    if not _ensure_model_ready(model_name):
-        raise SystemExit(1)
+
+    for name in model_names:
+        if not _ensure_model_ready(name):
+            raise SystemExit(1)
 
     from bithub.server import start_server
-    start_server(model_name, host=host, port=port, threads=threads,
-                 context_size=context_size)
+    start_server(
+        model_names=list(model_names),
+        host=host, port=port,
+        threads=threads, context_size=context_size,
+        lazy=lazy,
+    )
 
 
 @cli.command()
