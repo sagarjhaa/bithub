@@ -18,7 +18,6 @@ info()  { echo -e "${GREEN}==>${NC} $*"; }
 warn()  { echo -e "${YELLOW}WARNING:${NC} $*"; }
 error() { echo -e "${RED}ERROR:${NC} $*" >&2; exit 1; }
 
-# Detect OS and architecture
 detect_platform() {
     local os arch
     os="$(uname -s | tr '[:upper:]' '[:lower:]')"
@@ -39,7 +38,6 @@ detect_platform() {
     echo "${os}-${arch}"
 }
 
-# Get download URL for latest release
 get_download_url() {
     local platform="$1"
     local api_url="https://api.github.com/repos/${REPO}/releases"
@@ -52,15 +50,47 @@ get_download_url() {
 
     local url
     url=$(curl -fsSL "$api_url" | grep "browser_download_url.*${platform}" | head -1 | cut -d '"' -f 4)
-
-    if [ -z "$url" ]; then
-        error "No release found for platform: ${platform}. Check https://github.com/${REPO}/releases"
-    fi
-
-    echo "$url"
+    echo "${url:-}"
 }
 
-# Main install flow
+build_from_source() {
+    info "Building bitnet.cpp from source (this takes a few minutes)..."
+
+    # Check build dependencies
+    local missing=""
+    command -v git &>/dev/null || missing="$missing git"
+    command -v cmake &>/dev/null || missing="$missing cmake"
+
+    if [ -n "$missing" ]; then
+        echo ""
+        warn "Missing build tools:$missing"
+        echo "  Install them first:"
+        echo "    macOS:  brew install cmake git"
+        echo "    Ubuntu: sudo apt install cmake clang git build-essential"
+        echo ""
+        echo "  Then run: bithub setup"
+        return 1
+    fi
+
+    # Download and run the build script
+    local build_script
+    build_script="$(mktemp)"
+    curl -fsSL "https://raw.githubusercontent.com/sagarjhaa/bithub/main/scripts/build-bitnet.sh" \
+        -o "$build_script"
+    chmod +x "$build_script"
+
+    export BITNET_SKIP_MODEL_DOWNLOAD=1
+    if bash "$build_script" "${BITHUB_HOME}/bitnet.cpp"; then
+        info "bitnet.cpp built successfully!"
+        rm -f "$build_script"
+        return 0
+    else
+        rm -f "$build_script"
+        warn "Build failed. You can try manually: bithub setup"
+        return 1
+    fi
+}
+
 main() {
     info "Installing bithub..."
 
@@ -89,25 +119,34 @@ main() {
         python3 -m pip install bithub || \
         error "Failed to install bithub via pip"
 
-    # Download pre-built bitnet.cpp binaries
-    info "Downloading pre-built bitnet.cpp binaries for $platform..."
+    # Try downloading pre-built binaries
     local download_url
     download_url="$(get_download_url "$platform")"
-    info "Downloading from: $download_url"
 
-    local tmpdir
-    tmpdir="$(mktemp -d)"
-    trap 'rm -rf "${tmpdir:-}"' EXIT
+    if [ -n "$download_url" ]; then
+        info "Downloading pre-built binaries for $platform..."
+        info "From: $download_url"
 
-    curl -fSL "$download_url" -o "$tmpdir/bithub-binaries.tar.gz"
+        local tmpdir
+        tmpdir="$(mktemp -d)"
+        trap 'rm -rf "${tmpdir:-}"' EXIT
 
-    # Extract binaries to prebuilt dir
-    local prebuilt_dir="${BITHUB_HOME}/prebuilt"
-    mkdir -p "$prebuilt_dir"
-    tar -xzf "$tmpdir/bithub-binaries.tar.gz" -C "$prebuilt_dir"
-    chmod +x "$prebuilt_dir"/*
-
-    info "Binaries installed to $prebuilt_dir"
+        if curl -fSL "$download_url" -o "$tmpdir/bithub-binaries.tar.gz" 2>/dev/null; then
+            local prebuilt_dir="${BITHUB_HOME}/prebuilt"
+            mkdir -p "$prebuilt_dir"
+            tar -xzf "$tmpdir/bithub-binaries.tar.gz" -C "$prebuilt_dir"
+            chmod +x "$prebuilt_dir"/*
+            info "Pre-built binaries installed to $prebuilt_dir"
+        else
+            warn "Binary download failed. Falling back to build from source..."
+            build_from_source || true
+        fi
+    else
+        # No pre-built binary for this platform — build from source
+        warn "No pre-built binary available for $platform."
+        info "Attempting to build from source..."
+        build_from_source || true
+    fi
 
     # Verify
     if command -v bithub &>/dev/null; then
