@@ -51,6 +51,8 @@ jobs:
         run: pip install huggingface_hub
 
       - name: Build bitnet.cpp
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           chmod +x scripts/build-bitnet.sh
           ./scripts/build-bitnet.sh ./bitnet-build
