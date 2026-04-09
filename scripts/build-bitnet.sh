@@ -47,9 +47,16 @@ if [ -f "setup_env.py" ]; then
     else
         EXTRA_FLAGS="-Wno-incompatible-pointer-types-discards-qualifiers"
     fi
+
+    ARCH_CMAKE_FLAG=""
+    if [ "$(uname -s)" = "Darwin" ] && [ "${BITNET_TARGET_ARCH:-}" = "x86_64" ]; then
+        ARCH_CMAKE_FLAG="\"-DCMAKE_OSX_ARCHITECTURES=x86_64\", "
+        sed -i.bak4 's/ARCH_ALIAS\[platform.machine()\]/"x86_64"/g' setup_env.py
+    fi
+
     echo "    Patching cmake flags: ${EXTRA_FLAGS}"
     sed -i.bak3 \
-        "s|\"-DCMAKE_CXX_COMPILER=|\"-DCMAKE_CXX_FLAGS=${EXTRA_FLAGS}\", \"-DCMAKE_C_FLAGS=${EXTRA_FLAGS}\", \"-DCMAKE_CXX_COMPILER=|" \
+        "s|\"-DCMAKE_CXX_COMPILER=|${ARCH_CMAKE_FLAG}\"-DCMAKE_CXX_FLAGS=${EXTRA_FLAGS}\", \"-DCMAKE_C_FLAGS=${EXTRA_FLAGS}\", \"-DCMAKE_CXX_COMPILER=|" \
         setup_env.py
 
     # Skip model download in CI

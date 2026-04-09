@@ -27,10 +27,11 @@ jobs:
             platform: macos-arm64
             cc: clang
             cxx: clang++
-          - os: macos-13
+          - os: macos-latest
             platform: macos-x86_64
             cc: clang
             cxx: clang++
+            target_arch: x86_64
 
     runs-on: ${{ matrix.os }}
 
@@ -61,6 +62,7 @@ jobs:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
           BITNET_SKIP_MODEL_DOWNLOAD: "1"
+          BITNET_TARGET_ARCH: ${{ matrix.target_arch || '' }}
         run: |
           chmod +x scripts/build-bitnet.sh
           ./scripts/build-bitnet.sh ./bitnet-build
