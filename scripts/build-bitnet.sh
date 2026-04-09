@@ -48,6 +48,14 @@ else
     cmake --build . --config Release -j "$NPROC"
 fi
 
+# Debug: show what was built
+echo "==> Build directory contents:"
+ls -la "$TARGET_DIR/build/" 2>/dev/null || echo "  (no build dir)"
+ls -la "$TARGET_DIR/build/bin/" 2>/dev/null || echo "  (no build/bin dir)"
+echo "==> All executables in target:"
+find "$TARGET_DIR" -type f -executable -name "llama*" 2>/dev/null || true
+find "$TARGET_DIR" -type f -name "*.exe" 2>/dev/null || true
+
 # Verify binaries exist — check standard locations first, then search
 echo "==> Checking for binaries..."
 FOUND=0
