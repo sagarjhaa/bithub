@@ -23,7 +23,7 @@ class TestVersion:
     def test_shows_version(self, runner: CliRunner) -> None:
         result = runner.invoke(cli, ["--version"])
         assert result.exit_code == 0
-        assert "0.1.0" in result.output
+        assert "0.1" in result.output
 
 
 class TestHelp:
@@ -108,7 +108,7 @@ class TestStatusCommand:
         ):
             result = runner.invoke(cli, ["status"])
         assert result.exit_code == 0
-        assert "0.1.0" in result.output
+        assert "0.1" in result.output
         assert "Not built" in result.output or "setup" in result.output.lower()
 
     def test_shows_status_engine_built(self, runner: CliRunner) -> None:

@@ -5,6 +5,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git cmake clang build-essential \
     && rm -rf /var/lib/apt/lists/*
 
+# setup_env.py needs huggingface_hub to configure the build
+RUN pip install --no-cache-dir huggingface_hub
+
 WORKDIR /build
 COPY scripts/build-bitnet.sh .
 RUN chmod +x build-bitnet.sh && ./build-bitnet.sh /build/bitnet.cpp
@@ -16,9 +19,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy bitnet.cpp binaries from builder
-COPY --from=builder /build/bitnet.cpp/build/bin/llama-server /opt/bithub/prebuilt/llama-server
-COPY --from=builder /build/bitnet.cpp/build/bin/llama-cli /opt/bithub/prebuilt/llama-cli
+# Copy bitnet.cpp binaries from builder (use wildcard-safe approach)
+COPY --from=builder /build/bitnet.cpp/build/bin/ /opt/bithub/prebuilt/
 
 # Install bithub
 WORKDIR /app

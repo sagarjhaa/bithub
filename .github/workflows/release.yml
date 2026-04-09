@@ -12,6 +12,7 @@ permissions:
 jobs:
   build-binaries:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
@@ -20,7 +21,7 @@ jobs:
             platform: linux-arm64
           - os: macos-latest
             platform: macos-arm64
-          - os: macos-13
+          - os: macos-14
             platform: macos-x86_64
 
     runs-on: ${{ matrix.os }}
@@ -28,11 +29,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Install build dependencies (Linux)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake clang build-essential
+
+      - name: Install build dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install cmake
+
+      - name: Install Python build deps for bitnet.cpp
+        run: pip install huggingface_hub
 
       - name: Build bitnet.cpp
         run: |
@@ -45,6 +59,11 @@ jobs:
           cp ./bitnet-build/build/bin/llama-server dist/ 2>/dev/null || true
           cp ./bitnet-build/build/bin/llama-cli dist/ 2>/dev/null || true
           cp ./bitnet-build/build/bin/main dist/ 2>/dev/null || true
+          # Check we got at least one binary
+          if [ -z "$(ls dist/ 2>/dev/null)" ]; then
+            echo "ERROR: No binaries found to package"
+            exit 1
+          fi
           cd dist && tar -czf ../bithub-${{ matrix.platform }}.tar.gz *
 
       - name: Upload artifact
