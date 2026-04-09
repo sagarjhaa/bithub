@@ -85,6 +85,50 @@ class TestFindBinaries:
             assert result.name == "llama-cli"
 
 
+class TestPrebuiltBinaryDetection:
+    def test_finds_prebuilt_server(self, tmp_path: Path) -> None:
+        prebuilt = tmp_path / "prebuilt"
+        prebuilt.mkdir()
+        (prebuilt / "llama-server").touch()
+        with patch("bithub.builder.PREBUILT_DIR", prebuilt):
+            from bithub.builder import get_server_binary
+            result = get_server_binary()
+            assert result is not None
+            assert "prebuilt" in str(result)
+
+    def test_finds_prebuilt_inference(self, tmp_path: Path) -> None:
+        prebuilt = tmp_path / "prebuilt"
+        prebuilt.mkdir()
+        (prebuilt / "llama-cli").touch()
+        with patch("bithub.builder.PREBUILT_DIR", prebuilt):
+            from bithub.builder import get_inference_binary
+            result = get_inference_binary()
+            assert result is not None
+            assert "prebuilt" in str(result)
+
+    def test_prefers_prebuilt_over_compiled(self, tmp_path: Path) -> None:
+        prebuilt = tmp_path / "prebuilt"
+        prebuilt.mkdir()
+        (prebuilt / "llama-server").touch()
+        cpp_dir = tmp_path / "bitnet.cpp" / "build" / "bin"
+        cpp_dir.mkdir(parents=True)
+        (cpp_dir / "llama-server").touch()
+        with patch("bithub.builder.PREBUILT_DIR", prebuilt), \
+             patch("bithub.builder.BITNET_CPP_DIR", tmp_path / "bitnet.cpp"):
+            from bithub.builder import get_server_binary
+            result = get_server_binary()
+            assert result is not None
+            assert "prebuilt" in str(result)
+
+    def test_is_built_true_with_prebuilt(self, tmp_path: Path) -> None:
+        prebuilt = tmp_path / "prebuilt"
+        prebuilt.mkdir()
+        (prebuilt / "llama-server").touch()
+        with patch("bithub.builder.PREBUILT_DIR", prebuilt):
+            from bithub.builder import is_bitnet_cpp_built
+            assert is_bitnet_cpp_built() is True
+
+
 class TestCheckPrerequisites:
     def test_reports_missing_tools(self) -> None:
         def fake_run(cmd, **kwargs):

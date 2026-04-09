@@ -11,6 +11,9 @@ BITNET_CPP_DIR = BITHUB_HOME / "bitnet.cpp"
 DB_PATH = BITHUB_HOME / "models.json"
 LOG_PATH = BITHUB_HOME / "bithub.log"
 
+# Pre-built binaries installed by Docker/Homebrew/install script
+PREBUILT_DIR = Path(os.environ.get("BITHUB_PREBUILT_DIR", BITHUB_HOME / "prebuilt"))
+
 # Server defaults
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8080

@@ -13,7 +13,7 @@ from typing import List, Optional
 
 from rich.console import Console
 
-from bithub.config import BITNET_CPP_DIR, ensure_dirs
+from bithub.config import BITNET_CPP_DIR, PREBUILT_DIR, ensure_dirs
 
 console = Console()
 
@@ -21,13 +21,12 @@ BITNET_CPP_REPO = "https://github.com/microsoft/BitNet.git"
 
 
 def is_bitnet_cpp_built() -> bool:
-    """Check if bitnet.cpp is already cloned and built."""
-    # The build produces a binary at build/bin/llama-cli (or similar)
+    """Check if bitnet.cpp binaries are available (prebuilt or compiled)."""
+    if (PREBUILT_DIR / "llama-server").exists() or (PREBUILT_DIR / "llama-cli").exists():
+        return True
     build_dir = BITNET_CPP_DIR / "build"
     if not build_dir.exists():
         return False
-
-    # Look for the inference binary
     inference_bin = _find_inference_binary()
     return inference_bin is not None
 
@@ -58,12 +57,18 @@ def _find_server_binary() -> Optional[Path]:
 
 
 def get_inference_binary() -> Optional[Path]:
-    """Return path to the inference CLI binary, or None if not built."""
+    """Get the inference binary, checking prebuilt dir first."""
+    prebuilt_cli = PREBUILT_DIR / "llama-cli"
+    if prebuilt_cli.exists():
+        return prebuilt_cli
     return _find_inference_binary()
 
 
 def get_server_binary() -> Optional[Path]:
-    """Return path to the server binary, or None if not built."""
+    """Get the server binary, checking prebuilt dir first."""
+    prebuilt_server = PREBUILT_DIR / "llama-server"
+    if prebuilt_server.exists():
+        return prebuilt_server
     return _find_server_binary()
 
 
