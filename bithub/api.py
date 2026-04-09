@@ -122,6 +122,15 @@ def create_app(
     dashboard_router = init_dashboard(manager)
     app.include_router(dashboard_router)
 
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.responses import FileResponse
+    static_dir = Path(__file__).parent / "static"
+    if static_dir.exists():
+        @app.get("/")
+        async def dashboard_root():
+            return FileResponse(static_dir / "index.html")
+        app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
     @app.on_event("startup")
     async def startup():
         console.print("\n[bold]Starting model backends...[/bold]")

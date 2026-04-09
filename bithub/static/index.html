@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>bithub</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="sidebar-brand">
+            <h1>bithub</h1>
+            <span class="version">v0.1.0</span>
+        </div>
+        <ul class="nav-links">
+            <li><a href="#/" class="nav-link active" data-page="chat">Chat</a></li>
+            <li><a href="#/models" class="nav-link" data-page="models">Models</a></li>
+            <li><a href="#/server" class="nav-link" data-page="server">Server</a></li>
+            <li><a href="#/settings" class="nav-link" data-page="settings">Settings</a></li>
+        </ul>
+    </nav>
+    <main class="content">
+        <div id="page-chat" class="page active">
+            <div class="chat-header">
+                <select id="model-select" class="model-select"></select>
+                <div class="chat-controls">
+                    <button id="clear-chat" class="btn btn-sm">Clear</button>
+                </div>
+            </div>
+            <div id="chat-messages" class="chat-messages"></div>
+            <div class="chat-input-area">
+                <textarea id="chat-input" placeholder="Type a message..." rows="1"></textarea>
+                <button id="send-btn" class="btn btn-primary">Send</button>
+            </div>
+        </div>
+        <div id="page-models" class="page">
+            <h2>Models</h2>
+            <div id="models-list" class="models-grid"></div>
+        </div>
+        <div id="page-server" class="page">
+            <h2>Server</h2>
+            <div id="server-stats" class="stats-grid"></div>
+        </div>
+        <div id="page-settings" class="page">
+            <h2>Settings</h2>
+            <div id="settings-form" class="settings-form"></div>
+        </div>
+    </main>
+    <script src="/static/app.js"></script>
+</body>
+</html>
