@@ -1,5 +1,6 @@
 """Tests for bithub.downloader."""
 
+import hashlib
 import json
 import shutil
 from pathlib import Path
@@ -124,6 +125,59 @@ class TestDownloadModelDiskSpace:
              }), \
              patch.object(dl, "hf_hub_download", return_value=str(model_dir / "model.gguf")):
             patched_downloader.download_model("test-model", force=True)
+
+
+class TestModelIntegrity:
+    def test_sha256_written_after_download(self, patched_downloader, tmp_home: Path) -> None:
+        model_dir = tmp_home / "models" / "test-model"
+        model_dir.mkdir(parents=True, exist_ok=True)
+        gguf = model_dir / "model.gguf"
+        gguf.write_bytes(b"fake model data")
+        expected_hash = hashlib.sha256(b"fake model data").hexdigest()
+
+        from bithub.downloader import _write_checksum
+        _write_checksum(gguf)
+
+        sha_file = model_dir / "sha256"
+        assert sha_file.exists()
+        assert sha_file.read_text().strip() == expected_hash
+
+    def test_verify_checksum_passes(self, patched_downloader, tmp_home: Path) -> None:
+        model_dir = tmp_home / "models" / "test-model"
+        model_dir.mkdir(parents=True, exist_ok=True)
+        gguf = model_dir / "model.gguf"
+        data = b"fake model data"
+        gguf.write_bytes(data)
+        sha_file = model_dir / "sha256"
+        sha_file.write_text(hashlib.sha256(data).hexdigest())
+
+        from bithub.downloader import verify_checksum
+        assert verify_checksum("test-model") is True
+
+    def test_verify_checksum_fails_on_mismatch(self, patched_downloader, tmp_home: Path) -> None:
+        model_dir = tmp_home / "models" / "test-model"
+        model_dir.mkdir(parents=True, exist_ok=True)
+        gguf = model_dir / "model.gguf"
+        gguf.write_bytes(b"real data")
+        sha_file = model_dir / "sha256"
+        sha_file.write_text("0" * 64)
+
+        from bithub.downloader import verify_checksum
+        assert verify_checksum("test-model") is False
+
+    def test_verify_checksum_false_when_no_model(self, patched_downloader) -> None:
+        from bithub.downloader import verify_checksum
+        assert verify_checksum("nonexistent") is False
+
+    def test_verify_checksum_false_when_no_sha_file(self, patched_downloader, tmp_home: Path) -> None:
+        model_dir = tmp_home / "models" / "test-model"
+        model_dir.mkdir(parents=True, exist_ok=True)
+        gguf = model_dir / "model.gguf"
+        gguf.write_bytes(b"data")
+        # No sha256 file created
+
+        from bithub.downloader import verify_checksum
+        assert verify_checksum("test-model") is False
 
 
 class TestRemoveModel:

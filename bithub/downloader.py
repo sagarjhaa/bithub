@@ -5,6 +5,7 @@ Downloads into ~/.bithub/models/<model_name>/ with progress bars.
 Uses huggingface_hub for reliable, resumable downloads.
 """
 
+import hashlib
 import shutil
 from pathlib import Path
 from typing import List, Optional
@@ -111,6 +112,38 @@ def get_model_gguf_path(model_name: str) -> Optional[Path]:
     model_dir = MODELS_DIR / model_name
     gguf_files = list(model_dir.glob("*.gguf"))
     return gguf_files[0] if gguf_files else None
+
+
+def _compute_sha256(file_path: Path) -> str:
+    """Compute SHA256 hash of a file."""
+    h = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        while True:
+            chunk = f.read(8192)
+            if not chunk:
+                break
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _write_checksum(gguf_path: Path) -> None:
+    """Write SHA256 checksum file next to the GGUF."""
+    sha = _compute_sha256(gguf_path)
+    checksum_file = gguf_path.parent / "sha256"
+    checksum_file.write_text(sha)
+
+
+def verify_checksum(model_name: str) -> bool:
+    """Verify a model's GGUF matches its stored SHA256. Returns False if mismatch or missing."""
+    gguf_path = get_model_gguf_path(model_name)
+    if gguf_path is None:
+        return False
+    checksum_file = gguf_path.parent / "sha256"
+    if not checksum_file.exists():
+        return False
+    stored = checksum_file.read_text().strip()
+    actual = _compute_sha256(gguf_path)
+    return stored == actual
 
 
 def _parse_size_mb(size_mb: int) -> int:
@@ -228,6 +261,9 @@ def download_model(model_name: str, force: bool = False) -> Path:
     console.print(f"\n[green]Downloaded successfully![/green]")
     console.print(f"  File: {downloaded_path}")
     console.print(f"  Size: {size_mb:.0f} MB")
+
+    _write_checksum(downloaded_path)
+    console.print(f"  Checksum: [dim]SHA256 written[/dim]")
 
     return downloaded_path
 
