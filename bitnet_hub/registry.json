@@ -1,0 +1,68 @@
+{
+  "models": {
+    "2B-4T": {
+      "name": "BitNet-b1.58-2B-4T",
+      "hf_repo": "microsoft/BitNet-b1.58-2B-4T-gguf",
+      "parameters": "2.4B",
+      "quant_type": "i2_s",
+      "description": "Microsoft's official 2.4B parameter 1-bit model",
+      "size_mb": 1800
+    },
+    "700M": {
+      "name": "bitnet_b1_58-large",
+      "hf_repo": "1bitLLM/bitnet_b1_58-large",
+      "parameters": "0.7B",
+      "quant_type": "i2_s",
+      "description": "Community 700M parameter 1-bit model",
+      "size_mb": 500
+    },
+    "3B": {
+      "name": "bitnet_b1_58-3B",
+      "hf_repo": "1bitLLM/bitnet_b1_58-3B",
+      "parameters": "3.3B",
+      "quant_type": "tl1",
+      "description": "Community 3.3B parameter 1-bit model",
+      "size_mb": 2500
+    },
+    "8B": {
+      "name": "Llama3-8B-1.58-100B-tokens",
+      "hf_repo": "HF1BitLLM/Llama3-8B-1.58-100B-tokens",
+      "parameters": "8.0B",
+      "quant_type": "i2_s",
+      "description": "Llama3 8B trained in 1.58-bit",
+      "size_mb": 5000
+    },
+    "falcon3-1B": {
+      "name": "Falcon3-1B-Instruct-1.58bit",
+      "hf_repo": "tiiuae/Falcon3-1B-Instruct-1.58bit",
+      "parameters": "1B",
+      "quant_type": "i2_s",
+      "description": "Falcon3 1B instruction-tuned 1-bit model",
+      "size_mb": 700
+    },
+    "falcon3-3B": {
+      "name": "Falcon3-3B-Instruct-1.58bit",
+      "hf_repo": "tiiuae/Falcon3-3B-Instruct-1.58bit",
+      "parameters": "3B",
+      "quant_type": "i2_s",
+      "description": "Falcon3 3B instruction-tuned 1-bit model",
+      "size_mb": 2000
+    },
+    "falcon3-7B": {
+      "name": "Falcon3-7B-Instruct-1.58bit",
+      "hf_repo": "tiiuae/Falcon3-7B-Instruct-1.58bit",
+      "parameters": "7B",
+      "quant_type": "i2_s",
+      "description": "Falcon3 7B instruction-tuned 1-bit model",
+      "size_mb": 4500
+    },
+    "falcon3-10B": {
+      "name": "Falcon3-10B-Instruct-1.58bit",
+      "hf_repo": "tiiuae/Falcon3-10B-Instruct-1.58bit",
+      "parameters": "10B",
+      "quant_type": "i2_s",
+      "description": "Falcon3 10B instruction-tuned 1-bit model",
+      "size_mb": 6500
+    }
+  }
+}

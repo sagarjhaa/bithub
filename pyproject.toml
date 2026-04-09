@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bitnet-hub"
+version = "0.1.0"
+description = "The missing friendly interface for BitNet inference. Ollama for 1-bit LLMs."
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+dependencies = [
+    "click>=8.0",
+    "rich>=13.0",
+    "huggingface-hub>=0.20.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.20.0",
+    "httpx>=0.24.0",
+]
+
+[project.scripts]
+bitnet-hub = "bitnet_hub.cli:cli"
+
+[project.urls]
+Homepage = "https://github.com/YOUR_USERNAME/bitnet-hub"
+Issues = "https://github.com/YOUR_USERNAME/bitnet-hub/issues"
+
+[tool.setuptools.packages.find]
+include = ["bitnet_hub*"]
+
+[tool.setuptools.package-data]
+bitnet_hub = ["registry.json"]
