@@ -27,6 +27,10 @@ jobs:
             platform: macos-arm64
             cc: clang
             cxx: clang++
+          - os: macos-13
+            platform: macos-x86_64
+            cc: clang
+            cxx: clang++
 
     runs-on: ${{ matrix.os }}
 
