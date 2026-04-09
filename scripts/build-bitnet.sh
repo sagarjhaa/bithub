@@ -71,48 +71,43 @@ else
     cmake --build . --config Release -j "$NPROC"
 fi
 
-# Debug: show what was built
-echo "==> Build directory contents:"
-ls -la "$TARGET_DIR/build/" 2>/dev/null || echo "  (no build dir)"
-ls -la "$TARGET_DIR/build/bin/" 2>/dev/null || echo "  (no build/bin dir)"
-echo "==> All executables in target:"
-find "$TARGET_DIR" -type f -executable -name "llama*" 2>/dev/null || true
-find "$TARGET_DIR" -type f -name "*.exe" 2>/dev/null || true
-
-# Verify binaries exist — check standard locations first, then search
-echo "==> Checking for binaries..."
+# Find binaries — check multiple possible locations
+# setup_env.py outputs to bin/ (not build/bin/)
+echo "==> Searching for binaries..."
 FOUND=0
+mkdir -p "$TARGET_DIR/build/bin"
 
-# Standard locations
-for bin in build/bin/llama-server build/bin/llama-cli build/bin/main; do
-    if [ -f "$TARGET_DIR/$bin" ]; then
-        echo "    Found: $bin"
-        FOUND=1
-    fi
+for search_dir in "$TARGET_DIR/build/bin" "$TARGET_DIR/bin" "$TARGET_DIR"; do
+    for name in llama-server llama-cli; do
+        if [ -f "$search_dir/$name" ]; then
+            echo "    Found: $search_dir/$name"
+            if [ "$search_dir" != "$TARGET_DIR/build/bin" ]; then
+                cp "$search_dir/$name" "$TARGET_DIR/build/bin/"
+            fi
+            FOUND=1
+        fi
+    done
 done
 
-# If not found, do a broad search (setup_env.py may put them elsewhere)
+# Last resort: recursive find
 if [ "$FOUND" -eq 0 ]; then
-    echo "    Not in standard locations, searching..."
-    # List what was actually built
-    find "$TARGET_DIR/build" -type f -executable 2>/dev/null | head -20 || true
-    # Look for our target binaries anywhere
-    for name in llama-server llama-cli main; do
-        MATCH=$(find "$TARGET_DIR" -type f -name "$name" 2>/dev/null | head -1 || true)
+    echo "    Trying recursive search..."
+    for name in llama-server llama-cli; do
+        MATCH=$(find "$TARGET_DIR" -name "$name" -type f 2>/dev/null | head -1 || true)
         if [ -n "$MATCH" ]; then
             echo "    Found: $MATCH"
-            mkdir -p "$TARGET_DIR/build/bin"
-            cp "$MATCH" "$TARGET_DIR/build/bin/" 2>/dev/null || true
+            cp "$MATCH" "$TARGET_DIR/build/bin/"
             FOUND=1
         fi
     done
 fi
 
 if [ "$FOUND" -eq 0 ]; then
-    echo "ERROR: No binaries found after build."
-    echo "Contents of build dir:"
-    ls -la "$TARGET_DIR/build/" 2>/dev/null || echo "  (no build dir)"
-    ls -la "$TARGET_DIR/build/bin/" 2>/dev/null || echo "  (no build/bin dir)"
+    echo "ERROR: No binaries found."
+    echo "Listing all files named llama*:"
+    find "$TARGET_DIR" -name "llama*" 2>/dev/null || true
+    echo "Listing bin directories:"
+    find "$TARGET_DIR" -type d -name "bin" 2>/dev/null || true
     exit 1
 fi
 
