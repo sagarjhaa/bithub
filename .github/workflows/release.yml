@@ -50,9 +50,22 @@ jobs:
       - name: Install Python build deps for bitnet.cpp
         run: pip install huggingface_hub
 
-      - name: Build bitnet.cpp
+      - name: Build bitnet.cpp (Linux - gcc)
+        if: runner.os == 'Linux'
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          CC: gcc
+          CXX: g++
+        run: |
+          chmod +x scripts/build-bitnet.sh
+          ./scripts/build-bitnet.sh ./bitnet-build
+
+      - name: Build bitnet.cpp (macOS - clang)
+        if: runner.os == 'macOS'
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          CFLAGS: "-Wno-error=incompatible-pointer-types-discards-qualifiers"
+          CXXFLAGS: "-Wno-error=incompatible-pointer-types-discards-qualifiers"
         run: |
           chmod +x scripts/build-bitnet.sh
           ./scripts/build-bitnet.sh ./bitnet-build
