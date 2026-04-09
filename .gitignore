@@ -26,3 +26,4 @@ htmlcov/
 
 # Project
 *.gguf
+bitnet-build/
