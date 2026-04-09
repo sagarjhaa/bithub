@@ -30,6 +30,11 @@ fi
 echo "==> Building bitnet.cpp with $NPROC threads..."
 cd "$TARGET_DIR"
 
+# Hotfix for Bitnet upstream C++ pointer const-cast compilation bug on Intel Mac
+if [ -f "src/ggml-bitnet-mad.cpp" ]; then
+    sed -i.bak5 's/int8_t \* y_col = y + col \* by;/int8_t \* y_col = (int8_t \*)y + col \* by;/g' src/ggml-bitnet-mad.cpp
+fi
+
 # Patch setup_env.py if present
 if [ -f "setup_env.py" ]; then
     # Swap compiler if CC is set
