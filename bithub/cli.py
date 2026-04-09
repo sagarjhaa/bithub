@@ -112,16 +112,24 @@ def cli(ctx, debug, verbose):
 @cli.command()
 @click.argument("model_name")
 @click.option("--force", is_flag=True, help="Re-download even if already present")
-def pull(model_name, force):
+@click.option("--name", default=None, help="Short name for direct HF pulls")
+def pull(model_name, force, name):
     """Download a BitNet model from HuggingFace.
 
     \b
     Examples:
-        bithub pull 2B-4T           # Microsoft's flagship 2B model
-        bithub pull falcon3-1B      # Smallest Falcon3 model
-        bithub pull 700M            # Tiny model for quick testing
-        bithub pull 2B-4T --force   # Re-download
+        bithub pull 2B-4T                                 # from registry
+        bithub pull falcon3-1B --force                     # re-download
+        bithub pull hf:microsoft/BitNet-b1.58-2B-4T-gguf  # direct from HF
+        bithub pull hf:user/custom-model --name mymodel    # with custom name
     """
+    from bithub.downloader import is_direct_hf_pull, parse_hf_uri, download_direct_hf
+
+    if is_direct_hf_pull(model_name):
+        repo_id, default_name = parse_hf_uri(model_name)
+        download_direct_hf(repo_id, name=name or default_name, force=force)
+        return
+
     info = get_model_info(model_name)
     if not info:
         _suggest_model(model_name)

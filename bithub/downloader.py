@@ -8,7 +8,7 @@ Uses huggingface_hub for reliable, resumable downloads.
 import hashlib
 import shutil
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from huggingface_hub import hf_hub_download, HfApi
 from huggingface_hub.utils import (
@@ -170,6 +170,18 @@ def _check_disk_space(target_dir: Path, size_mb: int) -> None:
         raise SystemExit(1)
 
 
+def is_direct_hf_pull(model_ref: str) -> bool:
+    """Check if a model reference uses the hf: prefix."""
+    return model_ref.startswith("hf:") and len(model_ref) > 3 and "/" in model_ref
+
+
+def parse_hf_uri(model_ref: str) -> Tuple[str, str]:
+    """Parse hf:org/repo into (repo_id, short_name)."""
+    repo_id = model_ref[3:]  # strip "hf:"
+    short_name = repo_id.split("/")[-1]
+    return repo_id, short_name
+
+
 def download_model(model_name: str, force: bool = False) -> Path:
     """
     Download a model from HuggingFace.
@@ -264,6 +276,74 @@ def download_model(model_name: str, force: bool = False) -> Path:
 
     _write_checksum(downloaded_path)
     console.print(f"  Checksum: [dim]SHA256 written[/dim]")
+
+    return downloaded_path
+
+
+def download_direct_hf(repo_id: str, name: Optional[str] = None, force: bool = False) -> Path:
+    """Download a GGUF model directly from any HuggingFace repo."""
+    ensure_dirs()
+
+    if not name:
+        name = repo_id.split("/")[-1]
+
+    model_dir = MODELS_DIR / name
+
+    if not force and is_model_downloaded(name):
+        existing = get_model_gguf_path(name)
+        console.print(f"[green]Model {name} already downloaded:[/green] {existing}")
+        console.print("Use [bold]--force[/bold] to re-download.")
+        return existing
+
+    console.print(f"\n[bold]Pulling from HuggingFace[/bold]")
+    console.print(f"  Repository: [dim]{repo_id}[/dim]")
+    console.print(f"  [yellow]Not in curated registry. Compatibility not guaranteed.[/yellow]\n")
+
+    with console.status("[bold blue]Finding GGUF file in repository..."):
+        try:
+            api = HfApi()
+            files = api.list_repo_files(repo_id)
+            gguf_files = [f for f in files if f.endswith(".gguf")]
+        except Exception as e:
+            console.print(f"[red]Failed to access repository: {e}[/red]")
+            raise SystemExit(1)
+
+    if not gguf_files:
+        console.print(f"[red]No GGUF files found in {repo_id}[/red]")
+        raise SystemExit(1)
+
+    gguf_filename = gguf_files[0]
+    if len(gguf_files) > 1:
+        console.print(f"  Found {len(gguf_files)} GGUF files, downloading: [cyan]{gguf_filename}[/cyan]")
+    else:
+        console.print(f"  Downloading: [cyan]{gguf_filename}[/cyan]\n")
+
+    try:
+        downloaded_path = hf_hub_download(
+            repo_id=repo_id,
+            filename=gguf_filename,
+            local_dir=str(model_dir),
+            local_dir_use_symlinks=False,
+        )
+        downloaded_path = Path(downloaded_path)
+    except Exception as e:
+        console.print(f"[red]Download failed: {e}[/red]")
+        raise SystemExit(1)
+
+    size_mb = downloaded_path.stat().st_size / (1024 * 1024)
+    console.print(f"\n[green]Downloaded successfully![/green]")
+    console.print(f"  File: {downloaded_path}")
+    console.print(f"  Size: {size_mb:.0f} MB")
+
+    _write_checksum(downloaded_path)
+    console.print(f"  Checksum: [dim]SHA256 written[/dim]")
+
+    from bithub.registry import save_custom_model
+    save_custom_model(name, {
+        "hf_repo": repo_id,
+        "name": name,
+        "source": "direct",
+    })
 
     return downloaded_path
 
