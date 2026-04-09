@@ -113,11 +113,19 @@ main() {
     fi
     info "Python $py_version OK"
 
-    # Install bithub via pip
-    info "Installing bithub Python package..."
-    python3 -m pip install --user bithub 2>/dev/null || \
-        python3 -m pip install bithub || \
-        error "Failed to install bithub via pip"
+    # Install bithub via pip inside a virtual environment (PEP 668 compliant)
+    info "Installing bithub Python package in an isolated virtual environment..."
+    local venv_dir="${BITHUB_HOME}/venv"
+    if [ ! -d "$venv_dir" ]; then
+        python3 -m venv "$venv_dir" || error "Failed to create virtual environment. Ensure python3-venv is installed."
+    fi
+    
+    "$venv_dir/bin/pip" install --upgrade pip --quiet
+    "$venv_dir/bin/pip" install bithub || error "Failed to install bithub via pip"
+
+    # Link the executable
+    mkdir -p "$HOME/.local/bin"
+    ln -sf "$venv_dir/bin/bithub" "$HOME/.local/bin/bithub"
 
     # Try downloading pre-built binaries
     local download_url
