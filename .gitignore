@@ -18,5 +18,11 @@ venv/
 .DS_Store
 Thumbs.db
 
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+
 # Project
 *.gguf
