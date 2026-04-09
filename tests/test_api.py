@@ -10,11 +10,7 @@ from fastapi.testclient import TestClient
 @pytest.fixture
 def api_client():
     """Create a TestClient with mocked dependencies (no real backend)."""
-    with patch("bithub.api.get_server_binary", return_value=Path("/fake/server")), \
-         patch("bithub.api.is_model_downloaded", return_value=True), \
-         patch("bithub.api.get_downloaded_models", return_value=[]), \
-         patch("bithub.api.list_available_models", return_value={}), \
-         patch("bithub.api.get_model_info", return_value={"name": "Test Model"}):
+    with patch("bithub.api.get_downloaded_models", return_value=[]):
         from bithub.api import create_app
         app = create_app(
             model_name="test-model",
@@ -37,13 +33,12 @@ class TestHealthEndpoint:
         assert resp.status_code == 200
         data = resp.json()
         assert "status" in data
-        assert "model" in data
 
-    def test_health_includes_model_field(self, api_client):
+    def test_health_includes_models_loaded(self, api_client):
         resp = api_client.get("/health")
         data = resp.json()
-        # Backend startup is skipped in tests, so model may be empty
-        assert "model" in data
+        assert "models_loaded" in data
+        assert isinstance(data["models_loaded"], int)
 
 
 class TestModelsEndpoint:
