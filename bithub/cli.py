@@ -7,7 +7,7 @@ from rich.table import Table
 
 from bithub import __version__
 from bithub.config import get_default_threads
-from bithub.registry import list_available_models, get_model_info
+from bithub.registry import get_model_info, list_available_models
 
 console = Console()
 
@@ -123,7 +123,7 @@ def pull(model_name, force, name):
         bithub pull hf:microsoft/BitNet-b1.58-2B-4T-gguf  # direct from HF
         bithub pull hf:user/custom-model --name mymodel    # with custom name
     """
-    from bithub.downloader import is_direct_hf_pull, parse_hf_uri, download_direct_hf
+    from bithub.downloader import download_direct_hf, is_direct_hf_pull, parse_hf_uri
 
     if is_direct_hf_pull(model_name):
         repo_id, default_name = parse_hf_uri(model_name)
@@ -324,7 +324,7 @@ def rm(model_name, yes):
         bithub rm 2B-4T
         bithub rm falcon3-3B -y    # skip confirmation
     """
-    from bithub.downloader import is_model_downloaded, remove_model, get_model_gguf_path
+    from bithub.downloader import get_model_gguf_path, is_model_downloaded, remove_model
 
     if not is_model_downloaded(model_name):
         console.print(f"[yellow]Model {model_name} is not downloaded.[/yellow]")
@@ -377,11 +377,13 @@ def bench(model_names, port, threads, context_size, json_output, compare):
         if not _ensure_model_ready(name):
             raise SystemExit(1)
 
-    from bithub.server import start_background_server, wait_for_server
     from bithub.bench import (
-        run_benchmark, display_results, display_comparison,
+        display_comparison,
+        display_results,
+        run_benchmark,
         save_results,
     )
+    from bithub.server import start_background_server, wait_for_server
 
     all_results = {}
 
@@ -429,9 +431,9 @@ def bench(model_names, port, threads, context_size, json_output, compare):
 @cli.command()
 def status():
     """Show the current state of bithub."""
-    from bithub.builder import is_bitnet_cpp_built, get_inference_binary, get_server_binary
+    from bithub.builder import get_inference_binary, get_server_binary, is_bitnet_cpp_built
+    from bithub.config import BITHUB_HOME, BITNET_CPP_DIR, MODELS_DIR, get_system_info
     from bithub.downloader import get_downloaded_models
-    from bithub.config import BITHUB_HOME, MODELS_DIR, BITNET_CPP_DIR, get_system_info
 
     sys_info = get_system_info()
 
@@ -453,13 +455,13 @@ def status():
     if is_bitnet_cpp_built():
         cli_bin = get_inference_binary()
         srv_bin = get_server_binary()
-        console.print(f"\n  Engine:   [green]Built[/green]")
+        console.print("\n  Engine:   [green]Built[/green]")
         if cli_bin:
             console.print(f"    CLI:    [dim]{cli_bin}[/dim]")
         if srv_bin:
             console.print(f"    Server: [dim]{srv_bin}[/dim]")
     else:
-        console.print(f"\n  Engine:   [yellow]Not built[/yellow]")
+        console.print("\n  Engine:   [yellow]Not built[/yellow]")
         console.print("    Run [bold]bithub setup[/bold] to get started.")
 
     # Downloaded models

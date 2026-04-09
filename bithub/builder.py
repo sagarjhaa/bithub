@@ -78,7 +78,7 @@ def _run_command(cmd: List[str], cwd: Optional[Path] = None, desc: str = "") -> 
         console.print(f"  [dim]{desc}[/dim]")
 
     try:
-        result = subprocess.run(
+        subprocess.run(
             cmd,
             cwd=cwd,
             capture_output=False,
@@ -131,7 +131,7 @@ def clone_bitnet_cpp(force: bool = False) -> bool:
         console.print("[yellow]Removing existing bitnet.cpp clone...[/yellow]")
         shutil.rmtree(BITNET_CPP_DIR)
 
-    console.print(f"\n[bold]Cloning bitnet.cpp[/bold]")
+    console.print("\n[bold]Cloning bitnet.cpp[/bold]")
     console.print(f"  From: {BITNET_CPP_REPO}")
     console.print(f"  To:   {BITNET_CPP_DIR}\n")
 
@@ -225,7 +225,7 @@ def setup_bitnet_cpp(force: bool = False) -> bool:
     # Verify
     binary = get_inference_binary()
     if binary:
-        console.print(f"\n[green]bitnet.cpp built successfully![/green]")
+        console.print("\n[green]bitnet.cpp built successfully![/green]")
         console.print(f"  Binary: {binary}")
         return True
     else:

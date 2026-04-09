@@ -12,13 +12,12 @@ Endpoints:
 """
 
 import json
-import sys
 from pathlib import Path
 from typing import List, Optional, Union
 
 import httpx
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field, validator
 from rich.console import Console
 
@@ -122,8 +121,8 @@ def create_app(
     dashboard_router = init_dashboard(manager)
     app.include_router(dashboard_router)
 
-    from fastapi.staticfiles import StaticFiles
     from fastapi.responses import FileResponse
+    from fastapi.staticfiles import StaticFiles
     static_dir = Path(__file__).parent / "static"
     if static_dir.exists():
         @app.get("/")

@@ -1,7 +1,10 @@
 """Paths and configuration for bithub."""
 
+import copy
+import logging
 import os
 import platform
+import sys
 from pathlib import Path
 
 # Default home directory: ~/.bithub
@@ -45,15 +48,11 @@ def get_system_info() -> dict:
     }
 
 
-def ensure_dirs():
+def ensure_dirs() -> None:
     """Create required directories if they don't exist."""
     BITHUB_HOME.mkdir(parents=True, exist_ok=True)
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
-
-import sys
-import copy
-import logging
 
 if sys.version_info >= (3, 11):
     import tomllib

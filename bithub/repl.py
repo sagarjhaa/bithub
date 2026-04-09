@@ -7,7 +7,6 @@ from typing import List, Optional, Tuple
 
 import httpx
 from rich.console import Console
-from rich.markdown import Markdown
 
 console = Console()
 
@@ -157,6 +156,7 @@ def start_repl(model: str, api_url: str) -> None:
     try:
         from prompt_toolkit import PromptSession
         from prompt_toolkit.history import FileHistory
+
         from bithub.config import BITHUB_HOME
 
         history_file = BITHUB_HOME / "repl_history"

@@ -9,16 +9,14 @@ Two modes:
 
 import signal
 import subprocess
-import sys
 import threading
 from pathlib import Path
 from typing import List, Optional
 
 import httpx
-
 from rich.console import Console
 
-from bithub.builder import get_server_binary, get_inference_binary, is_bitnet_cpp_built
+from bithub.builder import get_inference_binary, is_bitnet_cpp_built
 from bithub.config import DEFAULT_HOST, DEFAULT_PORT
 from bithub.downloader import get_model_gguf_path, is_model_downloaded
 from bithub.registry import get_model_info
@@ -83,9 +81,10 @@ def start_server(
             console.print("[red]No models specified.[/red]")
             raise SystemExit(1)
 
-    from bithub.model_manager import ModelManager
-    from bithub.api import create_app
     import uvicorn
+
+    from bithub.api import create_app
+    from bithub.model_manager import ModelManager
 
     backend_base_port = port + 1
     manager = ModelManager(base_port=backend_base_port, max_models=len(model_names))
@@ -94,7 +93,7 @@ def start_server(
         gguf_path = _preflight_check(name)
         manager.register(name, gguf_path, threads=threads, context_size=context_size)
 
-    console.print(f"\n[bold green]Starting bithub server[/bold green]")
+    console.print("\n[bold green]Starting bithub server[/bold green]")
     for name in model_names:
         info = get_model_info(name)
         display_name = info["name"] if info else name
@@ -128,8 +127,9 @@ def start_background_server(
     """Start the API server in a background thread for REPL use."""
     gguf_path = _preflight_check(model_name)
 
-    from bithub.api import create_app
     import uvicorn
+
+    from bithub.api import create_app
 
     backend_port = port + 1
     app = create_app(

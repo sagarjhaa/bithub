@@ -10,22 +10,13 @@ import shutil
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from huggingface_hub import hf_hub_download, HfApi
+from huggingface_hub import HfApi, hf_hub_download
 from huggingface_hub.utils import (
     EntryNotFoundError,
-    RepositoryNotFoundError,
     GatedRepoError,
+    RepositoryNotFoundError,
 )
 from rich.console import Console
-from rich.progress import (
-    Progress,
-    SpinnerColumn,
-    TextColumn,
-    BarColumn,
-    DownloadColumn,
-    TransferSpeedColumn,
-    TimeRemainingColumn,
-)
 
 from bithub.config import MODELS_DIR, ensure_dirs
 from bithub.registry import get_model_info
@@ -270,12 +261,12 @@ def download_model(model_name: str, force: bool = False) -> Path:
         raise SystemExit(1)
 
     size_mb = downloaded_path.stat().st_size / (1024 * 1024)
-    console.print(f"\n[green]Downloaded successfully![/green]")
+    console.print("\n[green]Downloaded successfully![/green]")
     console.print(f"  File: {downloaded_path}")
     console.print(f"  Size: {size_mb:.0f} MB")
 
     _write_checksum(downloaded_path)
-    console.print(f"  Checksum: [dim]SHA256 written[/dim]")
+    console.print("  Checksum: [dim]SHA256 written[/dim]")
 
     return downloaded_path
 
@@ -295,9 +286,9 @@ def download_direct_hf(repo_id: str, name: Optional[str] = None, force: bool = F
         console.print("Use [bold]--force[/bold] to re-download.")
         return existing
 
-    console.print(f"\n[bold]Pulling from HuggingFace[/bold]")
+    console.print("\n[bold]Pulling from HuggingFace[/bold]")
     console.print(f"  Repository: [dim]{repo_id}[/dim]")
-    console.print(f"  [yellow]Not in curated registry. Compatibility not guaranteed.[/yellow]\n")
+    console.print("  [yellow]Not in curated registry. Compatibility not guaranteed.[/yellow]\n")
 
     with console.status("[bold blue]Finding GGUF file in repository..."):
         try:
@@ -314,7 +305,10 @@ def download_direct_hf(repo_id: str, name: Optional[str] = None, force: bool = F
 
     gguf_filename = gguf_files[0]
     if len(gguf_files) > 1:
-        console.print(f"  Found {len(gguf_files)} GGUF files, downloading: [cyan]{gguf_filename}[/cyan]")
+        console.print(
+            f"  Found {len(gguf_files)} GGUF files, "
+            f"downloading: [cyan]{gguf_filename}[/cyan]"
+        )
     else:
         console.print(f"  Downloading: [cyan]{gguf_filename}[/cyan]\n")
 
@@ -331,12 +325,12 @@ def download_direct_hf(repo_id: str, name: Optional[str] = None, force: bool = F
         raise SystemExit(1)
 
     size_mb = downloaded_path.stat().st_size / (1024 * 1024)
-    console.print(f"\n[green]Downloaded successfully![/green]")
+    console.print("\n[green]Downloaded successfully![/green]")
     console.print(f"  File: {downloaded_path}")
     console.print(f"  Size: {size_mb:.0f} MB")
 
     _write_checksum(downloaded_path)
-    console.print(f"  Checksum: [dim]SHA256 written[/dim]")
+    console.print("  Checksum: [dim]SHA256 written[/dim]")
 
     from bithub.registry import save_custom_model
     save_custom_model(name, {

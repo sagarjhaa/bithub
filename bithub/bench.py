@@ -21,11 +21,19 @@ BENCHMARK_PROMPTS = [
     },
     {
         "name": "medium",
-        "messages": [{"role": "user", "content": "Explain how a CPU works in about 100 words. Cover the fetch-decode-execute cycle."}],
+        "messages": [{"role": "user", "content": (
+            "Explain how a CPU works in about 100 words. "
+            "Cover the fetch-decode-execute cycle."
+        )}],
     },
     {
         "name": "long",
-        "messages": [{"role": "user", "content": "Write a detailed explanation of how neural networks learn, covering forward propagation, loss functions, backpropagation, and gradient descent. Use concrete examples. Aim for about 300 words."}],
+        "messages": [{"role": "user", "content": (
+            "Write a detailed explanation of how neural networks learn, "
+            "covering forward propagation, loss functions, backpropagation, "
+            "and gradient descent. Use concrete examples. "
+            "Aim for about 300 words."
+        )}],
     },
 ]
 
@@ -114,7 +122,11 @@ def display_results(model: str, results: List[dict]) -> None:
         avg_tps = sum(r["tokens_per_second"] for r in results) / len(results)
         avg_ttft = sum(r["time_to_first_token"] for r in results) / len(results)
         table.add_row("", "", "", "", "", end_section=True)
-        table.add_row("[bold]average[/bold]", f"[bold]{avg_tps:.1f}[/bold]", f"{avg_ttft:.2f}s", "", "")
+        table.add_row(
+            "[bold]average[/bold]",
+            f"[bold]{avg_tps:.1f}[/bold]",
+            f"{avg_ttft:.2f}s", "", "",
+        )
     console.print()
     console.print(table)
 

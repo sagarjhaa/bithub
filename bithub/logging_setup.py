@@ -3,7 +3,7 @@
 import logging
 from logging.handlers import RotatingFileHandler
 
-from bithub.config import LOG_PATH, BITHUB_HOME
+from bithub.config import BITHUB_HOME, LOG_PATH
 
 
 def setup_logging(debug: bool = False, verbose: bool = False) -> None:
