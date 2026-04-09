@@ -38,12 +38,12 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake clang build-essential
+          sudo apt-get install -y cmake clang build-essential gcc g++ libomp-dev
 
       - name: Install build dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install cmake
+          brew install cmake libomp
 
       - name: Install Python build deps for bitnet.cpp
         run: pip install huggingface_hub
