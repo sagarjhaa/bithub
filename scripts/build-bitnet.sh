@@ -48,29 +48,40 @@ else
     cmake --build . --config Release -j "$NPROC"
 fi
 
-# Verify binaries exist
+# Verify binaries exist — check standard locations first, then search
+echo "==> Checking for binaries..."
 FOUND=0
+
+# Standard locations
 for bin in build/bin/llama-server build/bin/llama-cli build/bin/main; do
     if [ -f "$TARGET_DIR/$bin" ]; then
-        echo "==> Found: $bin"
+        echo "    Found: $bin"
         FOUND=1
     fi
 done
 
+# If not found, do a broad search (setup_env.py may put them elsewhere)
 if [ "$FOUND" -eq 0 ]; then
-    echo "    Searching for binaries..."
-    FOUND_BIN=$(find "$TARGET_DIR" -type f \( -name "llama-server" -o -name "llama-cli" \) 2>/dev/null | head -1)
-    if [ -n "${FOUND_BIN:-}" ]; then
-        echo "==> Found: $FOUND_BIN"
-        mkdir -p "$TARGET_DIR/build/bin"
-        find "$TARGET_DIR" -type f \( -name "llama-server" -o -name "llama-cli" \) \
-            -exec cp {} "$TARGET_DIR/build/bin/" \; 2>/dev/null
-        FOUND=1
-    fi
+    echo "    Not in standard locations, searching..."
+    # List what was actually built
+    find "$TARGET_DIR/build" -type f -executable 2>/dev/null | head -20 || true
+    # Look for our target binaries anywhere
+    for name in llama-server llama-cli main; do
+        MATCH=$(find "$TARGET_DIR" -type f -name "$name" 2>/dev/null | head -1 || true)
+        if [ -n "$MATCH" ]; then
+            echo "    Found: $MATCH"
+            mkdir -p "$TARGET_DIR/build/bin"
+            cp "$MATCH" "$TARGET_DIR/build/bin/" 2>/dev/null || true
+            FOUND=1
+        fi
+    done
 fi
 
 if [ "$FOUND" -eq 0 ]; then
     echo "ERROR: No binaries found after build."
+    echo "Contents of build dir:"
+    ls -la "$TARGET_DIR/build/" 2>/dev/null || echo "  (no build dir)"
+    ls -la "$TARGET_DIR/build/bin/" 2>/dev/null || echo "  (no build/bin dir)"
     exit 1
 fi
 
