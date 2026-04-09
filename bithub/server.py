@@ -10,7 +10,10 @@ Two modes:
 import signal
 import subprocess
 import sys
+import threading
 from pathlib import Path
+
+import httpx
 
 from rich.console import Console
 
@@ -109,6 +112,52 @@ def start_server(
         uvicorn.run(app, host=host, port=port, log_level="warning")
     except KeyboardInterrupt:
         console.print("\n[green]Server stopped.[/green]")
+
+
+def start_background_server(
+    model_name: str,
+    host: str = "127.0.0.1",
+    port: int = 8081,
+    threads: int = 2,
+    context_size: int = 2048,
+) -> threading.Thread:
+    """Start the API server in a background thread for REPL use."""
+    gguf_path = _preflight_check(model_name)
+
+    from bithub.api import create_app
+    import uvicorn
+
+    backend_port = port + 1
+    app = create_app(
+        model_name=model_name,
+        gguf_path=gguf_path,
+        threads=threads,
+        context_size=context_size,
+        backend_port=backend_port,
+    )
+
+    server_thread = threading.Thread(
+        target=uvicorn.run,
+        kwargs={"app": app, "host": host, "port": port, "log_level": "error"},
+        daemon=True,
+    )
+    server_thread.start()
+    return server_thread
+
+
+def wait_for_server(url: str, timeout: float = 30.0) -> bool:
+    """Wait for the API server to become ready."""
+    import time
+    start = time.time()
+    while time.time() - start < timeout:
+        try:
+            resp = httpx.get(f"{url}/health", timeout=2.0)
+            if resp.status_code == 200:
+                return True
+        except (httpx.ConnectError, httpx.ReadTimeout):
+            pass
+        time.sleep(0.5)
+    return False
 
 
 def run_interactive(

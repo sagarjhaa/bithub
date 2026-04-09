@@ -316,17 +316,22 @@ class TestRunCommand:
             result = runner.invoke(cli, ["run", "2B-4T"], input="n\n")
         assert result.exit_code != 0
 
-    def test_run_calls_run_interactive_when_ready(self, runner: CliRunner) -> None:
-        mock_interactive = MagicMock()
+    def test_run_starts_background_server_and_repl(self, runner: CliRunner) -> None:
+        mock_bg_server = MagicMock()
+        mock_wait = MagicMock(return_value=True)
+        mock_repl = MagicMock()
         with (
             patch("bithub.builder.is_bitnet_cpp_built", return_value=True),
             patch("bithub.downloader.is_model_downloaded", return_value=True),
-            patch("bithub.server.run_interactive", mock_interactive),
+            patch("bithub.server.start_background_server", mock_bg_server),
+            patch("bithub.server.wait_for_server", mock_wait),
+            patch("bithub.repl.start_repl", mock_repl),
         ):
             result = runner.invoke(cli, ["run", "2B-4T"])
-        mock_interactive.assert_called_once()
-        call_kwargs = mock_interactive.call_args
-        assert call_kwargs[0][0] == "2B-4T"
+        mock_bg_server.assert_called_once()
+        assert mock_bg_server.call_args[0][0] == "2B-4T"
+        mock_wait.assert_called_once()
+        mock_repl.assert_called_once_with(model="2B-4T", api_url="http://127.0.0.1:8081")
 
 
 # ──────────────────────────────────────────────────────────────

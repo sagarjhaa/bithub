@@ -196,21 +196,49 @@ def serve(model_name, host, port, threads, context_size):
               help="Number of CPU threads")
 @click.option("--context-size", "-c", default=2048, show_default=True,
               help="Context window size")
-def run(model_name, threads, context_size):
+@click.option("--port", default=8081, hidden=True, help="API server port for REPL backend")
+def run(model_name, threads, context_size, port):
     """Chat with a model in your terminal.
+
+    Starts a local API server in the background and opens an interactive
+    chat session with markdown rendering, history, and slash commands.
 
     \b
     Examples:
         bithub run 2B-4T
         bithub run falcon3-3B -t 4
+
+    \b
+    Commands in chat:
+        /help     Show commands
+        /clear    Clear history
+        /system   Set system prompt
+        /export   Save conversation
+        /quit     Exit
     """
     if not _ensure_engine_ready():
         raise SystemExit(1)
     if not _ensure_model_ready(model_name):
         raise SystemExit(1)
 
-    from bithub.server import run_interactive
-    run_interactive(model_name, threads=threads, context_size=context_size)
+    from bithub.server import start_background_server, wait_for_server
+
+    api_url = f"http://127.0.0.1:{port}"
+
+    console.print("[dim]Starting local API server...[/dim]")
+    start_background_server(
+        model_name, host="127.0.0.1", port=port,
+        threads=threads, context_size=context_size,
+    )
+
+    if not wait_for_server(api_url):
+        console.print("[red]Server failed to start. Run bithub status for diagnostics.[/red]")
+        raise SystemExit(1)
+
+    console.print("[dim]Server ready.[/dim]\n")
+
+    from bithub.repl import start_repl
+    start_repl(model=model_name, api_url=api_url)
 
 
 # ──────────────────────────────────────────────────────────────
