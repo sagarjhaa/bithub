@@ -98,6 +98,8 @@ class ModelManager:
         self.models: Dict[str, dict] = {}
         self.backends: Dict[str, BackendProcess] = {}
         self._next_port = base_port
+        self.stats: Dict[str, int] = {"requests": 0, "tokens_generated": 0}
+        self._start_time: Optional[float] = None
 
     def register(
         self,
@@ -145,8 +147,21 @@ class ModelManager:
             console.print(f"  [green]{name} ready on port {info['backend_port']}[/green]")
         return success
 
+    def get_stats(self) -> dict:
+        uptime = time.time() - self._start_time if self._start_time else 0
+        return {
+            "uptime_seconds": int(uptime),
+            "total_requests": self.stats["requests"],
+            "models_loaded": sum(1 for m in self.list_models() if m["loaded"]),
+            "models_registered": len(self.models),
+        }
+
+    def record_request(self) -> None:
+        self.stats["requests"] += 1
+
     def start_all(self) -> bool:
         """Start backends for all registered models."""
+        self._start_time = time.time()
         all_ok = True
         for name in self.models:
             if not self.start_model(name):

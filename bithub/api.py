@@ -118,6 +118,10 @@ def create_app(
         version="0.1.0",
     )
 
+    from bithub.dashboard_api import init_dashboard
+    dashboard_router = init_dashboard(manager)
+    app.include_router(dashboard_router)
+
     @app.on_event("startup")
     async def startup():
         console.print("\n[bold]Starting model backends...[/bold]")
