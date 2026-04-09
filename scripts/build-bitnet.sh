@@ -10,6 +10,11 @@ set -euo pipefail
 #   NPROC                        - Override parallel build jobs
 
 TARGET_DIR="${1:-${BITHUB_HOME:-$HOME/.bithub}/bitnet.cpp}"
+
+if [[ "$TARGET_DIR" != /* ]]; then
+    TARGET_DIR="$PWD/$TARGET_DIR"
+fi
+
 REPO_URL="https://github.com/microsoft/BitNet.git"
 NPROC="${NPROC:-$(nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 4)}"
 
