@@ -82,7 +82,10 @@ def _ensure_model_ready(model_name: str) -> bool:
 
 @click.group()
 @click.version_option(version=__version__)
-def cli():
+@click.option("--debug", is_flag=True, hidden=True, help="Enable debug logging")
+@click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
+@click.pass_context
+def cli(ctx, debug, verbose):
     """bithub — Ollama for 1-bit LLMs.
 
     Download, manage, and serve BitNet models with a single command.
@@ -94,7 +97,11 @@ def cli():
         bithub serve 2B-4T      # start OpenAI-compatible API
         bithub run 2B-4T        # chat in terminal
     """
-    pass
+    ctx.ensure_object(dict)
+    ctx.obj["debug"] = debug
+    ctx.obj["verbose"] = verbose
+    from bithub.logging_setup import setup_logging
+    setup_logging(debug=debug, verbose=verbose)
 
 
 # ──────────────────────────────────────────────────────────────

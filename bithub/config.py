@@ -9,6 +9,7 @@ BITHUB_HOME = Path(os.environ.get("BITHUB_HOME", Path.home() / ".bithub"))
 MODELS_DIR = BITHUB_HOME / "models"
 BITNET_CPP_DIR = BITHUB_HOME / "bitnet.cpp"
 DB_PATH = BITHUB_HOME / "models.json"
+LOG_PATH = BITHUB_HOME / "bithub.log"
 
 # Server defaults
 DEFAULT_HOST = "127.0.0.1"
