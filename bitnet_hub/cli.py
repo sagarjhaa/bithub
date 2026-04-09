@@ -2,12 +2,82 @@
 
 import click
 from rich.console import Console
+from rich.panel import Panel
 from rich.table import Table
 
 from bitnet_hub import __version__
+from bitnet_hub.config import get_default_threads
 from bitnet_hub.registry import list_available_models, get_model_info
 
 console = Console()
+
+# Auto-detect a sensible thread count
+_DEFAULT_THREADS = get_default_threads()
+
+
+def _suggest_model(model_name: str) -> None:
+    """When a model name isn't found, suggest close matches."""
+    available = list(list_available_models().keys())
+
+    # Simple substring match
+    suggestions = [m for m in available if model_name.lower() in m.lower()]
+    if not suggestions:
+        # Try the other direction
+        suggestions = [m for m in available if m.lower() in model_name.lower()]
+
+    console.print(f"[red]Unknown model:[/red] {model_name}")
+    if suggestions:
+        console.print(f"  Did you mean: [bold cyan]{suggestions[0]}[/bold cyan]?")
+    console.print("  Run [bold]bitnet-hub models[/bold] to see all available models.")
+
+
+def _ensure_engine_ready() -> bool:
+    """Check if the engine is built. If not, offer to set it up."""
+    from bitnet_hub.builder import is_bitnet_cpp_built
+
+    if is_bitnet_cpp_built():
+        return True
+
+    console.print("[yellow]The bitnet.cpp engine is not built yet.[/yellow]")
+
+    if click.confirm("  Would you like to set it up now?", default=True):
+        from bitnet_hub.builder import setup_bitnet_cpp
+        return setup_bitnet_cpp()
+    else:
+        console.print("  Run [bold]bitnet-hub setup[/bold] when you're ready.")
+        return False
+
+
+def _ensure_model_ready(model_name: str) -> bool:
+    """Check if a model is downloaded. If not, offer to pull it."""
+    from bitnet_hub.downloader import is_model_downloaded
+
+    if is_model_downloaded(model_name):
+        return True
+
+    info = get_model_info(model_name)
+    if not info:
+        _suggest_model(model_name)
+        return False
+
+    console.print(f"[yellow]Model {model_name} is not downloaded yet.[/yellow]")
+    console.print(f"  ({info['name']}, {info['parameters']} params, ~{info['size_mb']}MB)")
+
+    if click.confirm("  Would you like to download it now?", default=True):
+        from bitnet_hub.downloader import download_model
+        try:
+            download_model(model_name)
+            return True
+        except SystemExit:
+            return False
+    else:
+        console.print(f"  Run [bold]bitnet-hub pull {model_name}[/bold] when you're ready.")
+        return False
+
+
+# ──────────────────────────────────────────────────────────────
+# Main CLI group
+# ──────────────────────────────────────────────────────────────
 
 
 @click.group()
@@ -16,6 +86,13 @@ def cli():
     """bitnet-hub — Ollama for 1-bit LLMs.
 
     Download, manage, and serve BitNet models with a single command.
+
+    \b
+    Quick start:
+        bitnet-hub setup            # one-time engine build
+        bitnet-hub pull 2B-4T       # download a model
+        bitnet-hub serve 2B-4T      # start OpenAI-compatible API
+        bitnet-hub run 2B-4T        # chat in terminal
     """
     pass
 
@@ -31,8 +108,18 @@ def cli():
 def pull(model_name, force):
     """Download a BitNet model from HuggingFace.
 
-    Example: bitnet-hub pull 2B-4T
+    \b
+    Examples:
+        bitnet-hub pull 2B-4T           # Microsoft's flagship 2B model
+        bitnet-hub pull falcon3-1B      # Smallest Falcon3 model
+        bitnet-hub pull 700M            # Tiny model for quick testing
+        bitnet-hub pull 2B-4T --force   # Re-download
     """
+    info = get_model_info(model_name)
+    if not info:
+        _suggest_model(model_name)
+        raise SystemExit(1)
+
     from bitnet_hub.downloader import download_model
     download_model(model_name, force=force)
 
@@ -42,14 +129,22 @@ def pull(model_name, force):
 def setup(force):
     """Clone and build bitnet.cpp (the inference engine).
 
-    This downloads and compiles Microsoft's bitnet.cpp so you can
-    run models locally. Only needs to be done once.
+    Only needs to be done once. Downloads Microsoft's bitnet.cpp and
+    compiles it for your system.
 
-    Example: bitnet-hub setup
+    \b
+    Requirements: git, cmake, clang
+        macOS:   brew install cmake llvm git
+        Ubuntu:  sudo apt install cmake clang git
     """
     from bitnet_hub.builder import setup_bitnet_cpp
     success = setup_bitnet_cpp(force=force)
-    if not success:
+    if success:
+        console.print("\n[bold green]You're all set![/bold green] Next steps:")
+        console.print("  1. [bold]bitnet-hub pull 2B-4T[/bold]    — download a model")
+        console.print("  2. [bold]bitnet-hub serve 2B-4T[/bold]   — start the API server")
+        console.print("  3. [bold]bitnet-hub run 2B-4T[/bold]     — chat in terminal")
+    else:
         raise SystemExit(1)
 
 
@@ -62,26 +157,51 @@ def setup(force):
 @click.argument("model_name")
 @click.option("--host", default="127.0.0.1", help="Host to bind to")
 @click.option("--port", default=8080, help="Port to listen on")
-@click.option("--threads", "-t", default=2, help="Number of CPU threads")
-@click.option("--context-size", "-c", default=2048, help="Context window size")
+@click.option("--threads", "-t", default=_DEFAULT_THREADS, show_default=True,
+              help="Number of CPU threads")
+@click.option("--context-size", "-c", default=2048, show_default=True,
+              help="Context window size")
 def serve(model_name, host, port, threads, context_size):
     """Start an OpenAI-compatible API server for a model.
 
-    Example: bitnet-hub serve 2B-4T
+    Any app that speaks the OpenAI API can connect — Open WebUI,
+    Cursor, or your own scripts.
+
+    \b
+    Examples:
+        bitnet-hub serve 2B-4T
+        bitnet-hub serve 2B-4T --port 9000
+        bitnet-hub serve falcon3-3B -t 4 -c 4096
     """
+    if not _ensure_engine_ready():
+        raise SystemExit(1)
+    if not _ensure_model_ready(model_name):
+        raise SystemExit(1)
+
     from bitnet_hub.server import start_server
-    start_server(model_name, host=host, port=port, threads=threads, context_size=context_size)
+    start_server(model_name, host=host, port=port, threads=threads,
+                 context_size=context_size)
 
 
 @cli.command()
 @click.argument("model_name")
-@click.option("--threads", "-t", default=2, help="Number of CPU threads")
-@click.option("--context-size", "-c", default=2048, help="Context window size")
+@click.option("--threads", "-t", default=_DEFAULT_THREADS, show_default=True,
+              help="Number of CPU threads")
+@click.option("--context-size", "-c", default=2048, show_default=True,
+              help="Context window size")
 def run(model_name, threads, context_size):
     """Chat with a model in your terminal.
 
-    Example: bitnet-hub run 2B-4T
+    \b
+    Examples:
+        bitnet-hub run 2B-4T
+        bitnet-hub run falcon3-3B -t 4
     """
+    if not _ensure_engine_ready():
+        raise SystemExit(1)
+    if not _ensure_model_ready(model_name):
+        raise SystemExit(1)
+
     from bitnet_hub.server import run_interactive
     run_interactive(model_name, threads=threads, context_size=context_size)
 
@@ -98,9 +218,11 @@ def list_models():
 
     downloaded = get_downloaded_models()
     if not downloaded:
-        console.print("[yellow]No models downloaded yet.[/yellow]")
-        console.print("Run [bold]bitnet-hub models[/bold] to see available models.")
-        console.print("Run [bold]bitnet-hub pull <name>[/bold] to download one.")
+        console.print("[yellow]No models downloaded yet.[/yellow]\n")
+        console.print("  Get started:")
+        console.print("    [bold]bitnet-hub pull 2B-4T[/bold]    — Microsoft's flagship (recommended)")
+        console.print("    [bold]bitnet-hub pull 700M[/bold]     — smallest, great for testing")
+        console.print("    [bold]bitnet-hub models[/bold]        — see all available models")
         return
 
     table = Table(title="Downloaded Models")
@@ -138,59 +260,89 @@ def models():
         )
 
     console.print(table)
+    console.print("\n  [dim]Tip: bitnet-hub pull <name> to download a model[/dim]")
 
 
 @cli.command()
 @click.argument("model_name")
-@click.confirmation_option(prompt="Are you sure you want to remove this model?")
-def rm(model_name):
+@click.option("--yes", "-y", is_flag=True, help="Skip confirmation")
+def rm(model_name, yes):
     """Remove a downloaded model.
 
-    Example: bitnet-hub rm 2B-4T
+    \b
+    Examples:
+        bitnet-hub rm 2B-4T
+        bitnet-hub rm falcon3-3B -y    # skip confirmation
     """
-    from bitnet_hub.downloader import remove_model
+    from bitnet_hub.downloader import is_model_downloaded, remove_model, get_model_gguf_path
+
+    if not is_model_downloaded(model_name):
+        console.print(f"[yellow]Model {model_name} is not downloaded.[/yellow]")
+        return
+
+    # Show what will be removed
+    gguf_path = get_model_gguf_path(model_name)
+    if gguf_path:
+        size_mb = gguf_path.stat().st_size / (1024 * 1024)
+        console.print(f"  Model: [bold]{model_name}[/bold]")
+        console.print(f"  File:  {gguf_path.name}")
+        console.print(f"  Size:  {size_mb:.0f} MB")
+
+    if not yes and not click.confirm("\n  Remove this model?", default=False):
+        console.print("  [dim]Cancelled.[/dim]")
+        return
 
     if remove_model(model_name):
         console.print(f"[green]Removed {model_name}.[/green]")
     else:
-        console.print(f"[yellow]Model {model_name} is not downloaded.[/yellow]")
+        console.print(f"[red]Failed to remove {model_name}.[/red]")
 
 
 @cli.command()
 def status():
-    """Show the current state of bitnet-hub.
-
-    Reports on the inference engine build status and downloaded models.
-    """
+    """Show the current state of bitnet-hub."""
     from bitnet_hub.builder import is_bitnet_cpp_built, get_inference_binary, get_server_binary
     from bitnet_hub.downloader import get_downloaded_models
-    from bitnet_hub.config import BITNET_HUB_HOME, MODELS_DIR, BITNET_CPP_DIR
+    from bitnet_hub.config import BITNET_HUB_HOME, MODELS_DIR, BITNET_CPP_DIR, get_system_info
 
-    console.print(f"\n[bold]bitnet-hub v{__version__}[/bold]\n")
+    sys_info = get_system_info()
+
+    # Header
+    console.print(Panel(
+        f"[bold]bitnet-hub[/bold] v{__version__}\n"
+        f"[dim]{sys_info['os']} {sys_info['arch']} / "
+        f"Python {sys_info['python']} / "
+        f"{sys_info['cpu_cores']} CPU cores[/dim]",
+        border_style="blue",
+    ))
 
     # Paths
-    console.print(f"  Home:       {BITNET_HUB_HOME}")
-    console.print(f"  Models:     {MODELS_DIR}")
-    console.print(f"  Engine:     {BITNET_CPP_DIR}")
+    console.print(f"  Home:     [dim]{BITNET_HUB_HOME}[/dim]")
+    console.print(f"  Models:   [dim]{MODELS_DIR}[/dim]")
+    console.print(f"  Engine:   [dim]{BITNET_CPP_DIR}[/dim]")
 
     # Engine status
     if is_bitnet_cpp_built():
         cli_bin = get_inference_binary()
         srv_bin = get_server_binary()
-        console.print(f"\n  [green]Engine:     Built[/green]")
+        console.print(f"\n  Engine:   [green]Built[/green]")
         if cli_bin:
-            console.print(f"    CLI:      {cli_bin}")
+            console.print(f"    CLI:    [dim]{cli_bin}[/dim]")
         if srv_bin:
-            console.print(f"    Server:   {srv_bin}")
+            console.print(f"    Server: [dim]{srv_bin}[/dim]")
     else:
-        console.print(f"\n  [yellow]Engine:     Not built[/yellow]")
-        console.print("    Run [bold]bitnet-hub setup[/bold] to build it.")
+        console.print(f"\n  Engine:   [yellow]Not built[/yellow]")
+        console.print("    Run [bold]bitnet-hub setup[/bold] to get started.")
 
     # Downloaded models
     downloaded = get_downloaded_models()
-    console.print(f"\n  Models:     {len(downloaded)} downloaded")
+    total_size = sum(m["size_mb"] for m in downloaded)
+    console.print(f"\n  Models:   {len(downloaded)} downloaded ({total_size} MB total)")
     for m in downloaded:
         console.print(f"    [cyan]{m['name']}[/cyan] ({m['size_mb']} MB)")
+
+    if not downloaded:
+        console.print("    [dim]Run bitnet-hub pull <name> to download a model[/dim]")
 
     console.print()
 
