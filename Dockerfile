@@ -10,6 +10,7 @@ RUN pip install --no-cache-dir huggingface_hub
 
 WORKDIR /build
 COPY scripts/build-bitnet.sh .
+ENV BITNET_SKIP_MODEL_DOWNLOAD=1
 RUN chmod +x build-bitnet.sh && ./build-bitnet.sh /build/bitnet.cpp
 
 # Stage 2: Runtime

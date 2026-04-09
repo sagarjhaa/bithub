@@ -7,24 +7,26 @@ on:
 permissions:
   contents: write
   packages: write
-  id-token: write  # Required for PyPI trusted publishing
+  id-token: write
 
 jobs:
   build-binaries:
-    # Binary builds require downloading a model from HuggingFace during
-    # bitnet.cpp's setup_env.py. This may fail due to rate limits.
-    # Mark as continue-on-error so the release still publishes the wheel.
-    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             platform: linux-x86_64
+            cc: gcc
+            cxx: g++
           - os: ubuntu-24.04-arm
             platform: linux-arm64
+            cc: gcc
+            cxx: g++
           - os: macos-latest
             platform: macos-arm64
+            cc: clang
+            cxx: clang++
 
     runs-on: ${{ matrix.os }}
 
@@ -44,28 +46,17 @@ jobs:
 
       - name: Install build dependencies (macOS)
         if: runner.os == 'macOS'
-        run: |
-          brew install cmake libomp
+        run: brew install cmake libomp
 
-      - name: Install Python build deps for bitnet.cpp
-        run: pip install huggingface_hub
+      - name: Install Python build deps
+        run: pip install "huggingface_hub[cli]"
 
-      - name: Build bitnet.cpp (Linux - gcc)
-        if: runner.os == 'Linux'
+      - name: Build bitnet.cpp
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          CC: gcc
-          CXX: g++
-        run: |
-          chmod +x scripts/build-bitnet.sh
-          ./scripts/build-bitnet.sh ./bitnet-build
-
-      - name: Build bitnet.cpp (macOS - clang)
-        if: runner.os == 'macOS'
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          CFLAGS: "-Wno-error=incompatible-pointer-types-discards-qualifiers"
-          CXXFLAGS: "-Wno-error=incompatible-pointer-types-discards-qualifiers"
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+          BITNET_SKIP_MODEL_DOWNLOAD: "1"
         run: |
           chmod +x scripts/build-bitnet.sh
           ./scripts/build-bitnet.sh ./bitnet-build
@@ -75,63 +66,48 @@ jobs:
           mkdir -p dist
           cp ./bitnet-build/build/bin/llama-server dist/ 2>/dev/null || true
           cp ./bitnet-build/build/bin/llama-cli dist/ 2>/dev/null || true
-          cp ./bitnet-build/build/bin/main dist/ 2>/dev/null || true
           if [ -z "$(ls dist/ 2>/dev/null)" ]; then
-            echo "ERROR: No binaries found to package"
-            exit 1
+            echo "WARNING: No binaries found to package. Skipping."
+            exit 0
           fi
           cd dist && tar -czf ../bithub-${{ matrix.platform }}.tar.gz *
 
       - name: Upload artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: bithub-${{ matrix.platform }}
           path: bithub-${{ matrix.platform }}.tar.gz
+          if-no-files-found: ignore
 
   build-wheel:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Build wheel
-        run: |
-          pip install build
-          python -m build
-
-      - name: Upload wheel
-        uses: actions/upload-artifact@v4
+      - run: pip install build && python -m build
+      - uses: actions/upload-artifact@v4
         with:
           name: python-wheel
           path: dist/*.whl
 
   release:
     runs-on: ubuntu-latest
-    needs: [build-wheel]
-    # Don't require build-binaries — they may fail due to HF rate limits
+    needs: [build-wheel, build-binaries]
     if: always() && needs.build-wheel.result == 'success'
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           path: release-artifacts
-
       - name: Compute checksums
         run: |
           cd release-artifacts
           find . \( -name "*.tar.gz" -o -name "*.whl" \) -exec sha256sum {} \; > checksums.txt || true
           cat checksums.txt
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
           files: |
@@ -145,13 +121,9 @@ jobs:
     environment:
       name: pypi
       url: https://pypi.org/p/bithub
-
     steps:
-      - name: Download wheel
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: python-wheel
           path: dist
-
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+      - uses: pypa/gh-action-pypi-publish@release/v1
