@@ -73,10 +73,36 @@ This means bithub works out of the box with Open WebUI, Cursor, Continue, and an
 
 ## Installation
 
+### Quick Install (recommended)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sagarjhaa/bithub/main/install.sh | bash
+```
+
+This installs the `bithub` CLI and downloads pre-built bitnet.cpp binaries for your platform.
+
+### pip
+
+```bash
+pip install bithub
+bithub setup  # builds bitnet.cpp (requires cmake + clang)
+```
+
+### Docker
+
+```bash
+# Pull a model and serve it
+docker run -p 8080:8080 -v ~/.bithub:/root/.bithub ghcr.io/sagarjhaa/bithub pull 2B-4T
+docker run -p 8080:8080 -v ~/.bithub:/root/.bithub ghcr.io/sagarjhaa/bithub serve 2B-4T
+```
+
+### From Source
+
 ```bash
 git clone https://github.com/sagarjhaa/bithub.git
 cd bithub
-pip install -e .
+pip install -e ".[dev]"
+bithub setup
 ```
 
 ## Quick Start
