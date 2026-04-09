@@ -41,6 +41,15 @@ if [ -f "setup_env.py" ]; then
         --hf-repo 1bitLLM/bitnet_b1_58-3B \
         -q i2_s \
         || echo "    setup_env.py exited with error (may be OK if binaries exist)"
+    # Show build logs if they exist (setup_env.py redirects cmake output)
+    if [ -f "logs/compile.log" ]; then
+        echo "==> Compile log (last 30 lines):"
+        tail -30 logs/compile.log
+    fi
+    if [ -f "logs/download_model.log" ]; then
+        echo "==> Download log (last 10 lines):"
+        tail -10 logs/download_model.log
+    fi
 else
     git submodule update --init --recursive 2>/dev/null || true
     mkdir -p build && cd build
