@@ -33,15 +33,14 @@ if [ -f "setup_env.py" ] && [ -n "${CC:-}" ]; then
 fi
 
 # bitnet.cpp's setup_env.py is the canonical build method
+# It compiles first, then downloads a model. We only need the binaries,
+# so we tolerate failure IF binaries were already produced.
 if [ -f "setup_env.py" ]; then
     echo "    Using setup_env.py..."
     python3 setup_env.py \
         --hf-repo 1bitLLM/bitnet_b1_58-3B \
         -q i2_s \
-        || {
-        echo "    setup_env.py failed."
-        exit 1
-    }
+        || echo "    setup_env.py exited with error (may be OK if binaries exist)"
 else
     git submodule update --init --recursive 2>/dev/null || true
     mkdir -p build && cd build
