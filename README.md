@@ -64,12 +64,18 @@ When you run `bithub serve`, you get a full OpenAI-compatible API:
 
 This means bithub works out of the box with Open WebUI, Cursor, Continue, and any tool that supports custom OpenAI endpoints.
 
-## Requirements
+## Quick Start
 
-- Python >= 3.9
-- cmake >= 3.22
-- clang >= 18
-- Git
+```bash
+# Install (downloads pre-built binaries — no compiler needed)
+curl -fsSL https://raw.githubusercontent.com/sagarjhaa/bithub/main/install.sh | bash
+
+# Pull a model and chat
+bithub pull 2B-4T
+bithub run 2B-4T
+```
+
+That's it. No cmake, no clang, no compiling.
 
 ## Installation
 
@@ -79,22 +85,23 @@ This means bithub works out of the box with Open WebUI, Cursor, Continue, and an
 curl -fsSL https://raw.githubusercontent.com/sagarjhaa/bithub/main/install.sh | bash
 ```
 
-This installs the `bithub` CLI and downloads pre-built bitnet.cpp binaries for your platform.
+Downloads the `bithub` CLI and pre-built bitnet.cpp binaries for your platform (macOS/Linux, x86_64/arm64). Requires Python 3.9+.
 
 ### pip
 
 ```bash
 pip install bithub
-bithub setup  # builds bitnet.cpp (requires cmake + clang)
+bithub setup  # compiles bitnet.cpp (requires cmake + clang)
 ```
 
 ### Docker
 
 ```bash
-# Pull a model and serve it
 docker run -p 8080:8080 -v ~/.bithub:/root/.bithub ghcr.io/sagarjhaa/bithub pull 2B-4T
 docker run -p 8080:8080 -v ~/.bithub:/root/.bithub ghcr.io/sagarjhaa/bithub serve 2B-4T
 ```
+
+Open `http://localhost:8080` for the built-in web dashboard.
 
 ### From Source
 
@@ -102,31 +109,30 @@ docker run -p 8080:8080 -v ~/.bithub:/root/.bithub ghcr.io/sagarjhaa/bithub serv
 git clone https://github.com/sagarjhaa/bithub.git
 cd bithub
 pip install -e ".[dev]"
-bithub setup
+bithub setup  # requires cmake + clang
 ```
 
-## Quick Start
+## Features
 
-```bash
-# 1. Build the inference engine (one-time)
-bithub setup
-
-# 2. Download a model
-bithub pull 2B-4T
-
-# 3. Start the server
-bithub serve 2B-4T
-
-# Or chat directly in terminal
-bithub run 2B-4T
-```
+- **Interactive REPL** — `bithub run` with markdown rendering, history, and `/commands`
+- **OpenAI-compatible API** — `bithub serve` works with Open WebUI, Cursor, any OpenAI client
+- **Web Dashboard** — chat, model management, server stats at `http://localhost:8080`
+- **Multi-model serving** — `bithub serve 2B-4T falcon3-3B` with model routing
+- **Direct HuggingFace pull** — `bithub pull hf:org/repo` for any GGUF model
+- **Lazy loading** — `bithub serve --lazy` starts backends on first request
 
 ## Roadmap
 
-- [x] Phase 1: Project structure and CLI skeleton
-- [x] Phase 2: Model downloader, builder, and engine management
-- [x] Phase 3: OpenAI-compatible API server
-- [ ] Phase 4: Terminal chat UX, progress bars, polish
+- [x] CLI with model registry (8 BitNet models)
+- [x] HuggingFace downloader + bitnet.cpp builder
+- [x] OpenAI-compatible API server
+- [x] Test suite (140+ tests), CI/CD, structured logging
+- [x] Docker, install script, GitHub Releases
+- [x] Interactive REPL with slash commands
+- [x] Multi-model serving with lazy loading
+- [x] Web dashboard (chat, models, server, settings)
+- [ ] Performance benchmarks (`bithub bench`)
+- [ ] Homebrew formula
 
 ## Contributing
 
