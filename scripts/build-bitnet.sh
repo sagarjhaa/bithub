@@ -21,15 +21,29 @@ fi
 echo "==> Building bitnet.cpp with $NPROC threads..."
 cd "$TARGET_DIR"
 
-# setup_env.py hardcodes -DCMAKE_C_COMPILER=clang, but clang on Linux
-# has a const-correctness error in bitnet.cpp's code. Patch it to respect
-# CC/CXX env vars if set.
-if [ -f "setup_env.py" ] && [ -n "${CC:-}" ]; then
-    echo "    Patching setup_env.py to use CC=$CC CXX=${CXX:-$CC}"
-    sed -i.bak \
-        -e "s|-DCMAKE_C_COMPILER=clang|-DCMAKE_C_COMPILER=${CC}|g" \
-        -e "s|-DCMAKE_CXX_COMPILER=clang++|-DCMAKE_CXX_COMPILER=${CXX:-${CC}++}|g" \
-        setup_env.py
+# setup_env.py hardcodes clang, which has a const-correctness error on Linux.
+# Patch: either swap compiler to gcc, or add -Wno-error flags.
+if [ -f "setup_env.py" ]; then
+    if [ -n "${CC:-}" ]; then
+        echo "    Patching setup_env.py to use CC=$CC CXX=${CXX:-${CC}++}"
+        sed -i.bak \
+            -e "s|-DCMAKE_C_COMPILER=clang|-DCMAKE_C_COMPILER=${CC}|g" \
+            -e "s|-DCMAKE_CXX_COMPILER=clang++|-DCMAKE_CXX_COMPILER=${CXX:-${CC}++}|g" \
+            setup_env.py
+        # Verify patch applied
+        if grep -q "CMAKE_C_COMPILER=${CC}" setup_env.py; then
+            echo "    Patch verified: using ${CC}"
+        else
+            echo "    WARNING: Patch may not have applied. Compiler line:"
+            grep "CMAKE_C_COMPILER" setup_env.py
+        fi
+    else
+        # Keep clang but suppress the const-correctness error
+        echo "    Patching setup_env.py to add -Wno-error flags"
+        sed -i.bak \
+            's|"-DCMAKE_CXX_COMPILER=clang++"|\"-DCMAKE_CXX_COMPILER=clang++\", \"-DCMAKE_C_FLAGS=-Wno-error=incompatible-pointer-types-discards-qualifiers\", \"-DCMAKE_CXX_FLAGS=-Wno-error=incompatible-pointer-types-discards-qualifiers -Wno-error=incompatible-pointer-types\"|g' \
+            setup_env.py
+    fi
 fi
 
 # bitnet.cpp's setup_env.py is the canonical build method
