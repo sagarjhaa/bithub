@@ -10,6 +10,7 @@ MODELS_DIR = BITHUB_HOME / "models"
 BITNET_CPP_DIR = BITHUB_HOME / "bitnet.cpp"
 DB_PATH = BITHUB_HOME / "models.json"
 LOG_PATH = BITHUB_HOME / "bithub.log"
+BENCHMARKS_DIR = BITHUB_HOME / "benchmarks"
 
 # Pre-built binaries installed by Docker/Homebrew/install script
 PREBUILT_DIR = Path(os.environ.get("BITHUB_PREBUILT_DIR", BITHUB_HOME / "prebuilt"))
