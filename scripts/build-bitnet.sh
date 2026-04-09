@@ -3,7 +3,6 @@ set -euo pipefail
 
 # Build bitnet.cpp from source.
 # Usage: ./scripts/build-bitnet.sh [TARGET_DIR]
-# TARGET_DIR defaults to ~/.bithub/bitnet.cpp
 #
 # Environment variables:
 #   CC/CXX                       - Override compiler (default: clang/clang++)
@@ -26,9 +25,9 @@ fi
 echo "==> Building bitnet.cpp with $NPROC threads..."
 cd "$TARGET_DIR"
 
-# Patch setup_env.py if needed
+# Patch setup_env.py if present
 if [ -f "setup_env.py" ]; then
-    # 1. Swap compiler if CC is set
+    # Swap compiler if CC is set
     if [ -n "${CC:-}" ]; then
         echo "    Patching compiler to CC=$CC CXX=${CXX:-${CC}++}"
         sed -i.bak \
@@ -37,26 +36,28 @@ if [ -f "setup_env.py" ]; then
             setup_env.py
     fi
 
-    # 2. Suppress upstream const-correctness error in bitnet.cpp
-    #    The code has: int8_t *y_col = y + ... (where y is const int8_t*)
-    #    clang treats this as a hard error. gcc with -fpermissive downgrades it.
-    echo "    Patching cmake flags for permissive compilation"
+    # Add permissive flags to suppress upstream const errors
     if [ "${CC:-clang}" = "gcc" ]; then
         EXTRA_FLAGS="-fpermissive"
     else
         EXTRA_FLAGS="-Wno-incompatible-pointer-types-discards-qualifiers"
     fi
+    echo "    Patching cmake flags: ${EXTRA_FLAGS}"
     sed -i.bak3 \
         "s|\"-DCMAKE_CXX_COMPILER=|\"-DCMAKE_CXX_FLAGS=${EXTRA_FLAGS}\", \"-DCMAKE_C_FLAGS=${EXTRA_FLAGS}\", \"-DCMAKE_CXX_COMPILER=|" \
         setup_env.py
 
-    # 2. Skip model download in CI (we only need binaries, not weights)
+    # Skip model download in CI
     if [ "${BITNET_SKIP_MODEL_DOWNLOAD:-}" = "1" ]; then
-        echo "    Patching to skip model download (BITNET_SKIP_MODEL_DOWNLOAD=1)"
+        echo "    Patching to skip model download"
         sed -i.bak2 \
             's/def prepare_model():/def prepare_model():\n    import os\n    if os.getenv("BITNET_SKIP_MODEL_DOWNLOAD") == "1":\n        return/' \
             setup_env.py
     fi
+
+    # Show the patched cmake line for verification
+    echo "    Patched cmake command:"
+    grep "CMAKE_C_COMPILER" setup_env.py | head -1
 fi
 
 # Build
@@ -64,13 +65,22 @@ if [ -f "setup_env.py" ]; then
     echo "    Running setup_env.py..."
     python3 setup_env.py \
         --hf-repo 1bitLLM/bitnet_b1_58-3B \
-        -q i2_s
-else
-    git submodule update --init --recursive 2>/dev/null || true
-    mkdir -p build && cd build
-    cmake .. -DCMAKE_BUILD_TYPE=Release
-    cmake --build . --config Release -j "$NPROC"
+        -q i2_s \
+        || true  # Don't fail — check binaries below
 fi
+
+# Always show build logs (setup_env.py redirects cmake output to files)
+for logfile in logs/generate_build_files.log logs/compile.log logs/download_model.log; do
+    if [ -f "$logfile" ]; then
+        echo "==> $logfile (last 20 lines):"
+        tail -20 "$logfile"
+    fi
+done
+
+# Show what exists
+echo "==> Directory listing:"
+ls -la "$TARGET_DIR/build/bin/" 2>/dev/null || echo "    build/bin/ does not exist"
+ls -la "$TARGET_DIR/bin/" 2>/dev/null || echo "    bin/ does not exist"
 
 # Find binaries
 echo "==> Searching for binaries..."
