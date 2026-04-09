@@ -1,20 +1,20 @@
-# bitnet-hub
+# bithub
 
 The missing friendly interface for [BitNet](https://github.com/microsoft/BitNet) inference. Think of it as **Ollama for 1-bit LLMs**.
 
-BitNet models are incredibly efficient — a 2B parameter model fits in ~800MB of RAM and runs fast on a plain CPU. But there's no easy way to download, manage, and serve them. **bitnet-hub** fixes that.
+BitNet models are incredibly efficient — a 2B parameter model fits in ~800MB of RAM and runs fast on a plain CPU. But there's no easy way to download, manage, and serve them. **bithub** fixes that.
 
 ## What it does
 
 ```bash
-bitnet-hub setup                # One-time: build the inference engine
-bitnet-hub pull 2B-4T           # Download a BitNet model from HuggingFace
-bitnet-hub models               # See all available models
-bitnet-hub list                 # See what's installed
-bitnet-hub serve 2B-4T          # Start an OpenAI-compatible API server
-bitnet-hub run 2B-4T            # Chat in your terminal
-bitnet-hub rm 2B-4T             # Remove a model
-bitnet-hub status               # Check engine and model state
+bithub setup                # One-time: build the inference engine
+bithub pull 2B-4T           # Download a BitNet model from HuggingFace
+bithub models               # See all available models
+bithub list                 # See what's installed
+bithub serve 2B-4T          # Start an OpenAI-compatible API server
+bithub run 2B-4T            # Chat in your terminal
+bithub rm 2B-4T             # Remove a model
+bithub status               # Check engine and model state
 ```
 
 Once the server is running, any app that speaks the OpenAI API can connect — Open WebUI, Cursor, your own scripts:
@@ -41,9 +41,9 @@ response = client.chat.completions.create(
 | **falcon3-7B** | 7B | ~4.5 GB | Falcon3 7B instruction-tuned |
 | **falcon3-10B** | 10B | ~6.5 GB | Falcon3 10B instruction-tuned |
 
-## Why bitnet-hub?
+## Why bithub?
 
-| | Ollama | bitnet-hub |
+| | Ollama | bithub |
 |---|---|---|
 | Engine | llama.cpp | bitnet.cpp |
 | Model weights | 4-bit / 8-bit quantized | Native 1.58-bit (ternary) |
@@ -54,7 +54,7 @@ response = client.chat.completions.create(
 
 ## API Endpoints
 
-When you run `bitnet-hub serve`, you get a full OpenAI-compatible API:
+When you run `bithub serve`, you get a full OpenAI-compatible API:
 
 | Method | Endpoint | Description |
 |---|---|---|
@@ -62,7 +62,7 @@ When you run `bitnet-hub serve`, you get a full OpenAI-compatible API:
 | `GET` | `/v1/models` | List available models |
 | `GET` | `/health` | Server health check |
 
-This means bitnet-hub works out of the box with Open WebUI, Cursor, Continue, and any tool that supports custom OpenAI endpoints.
+This means bithub works out of the box with Open WebUI, Cursor, Continue, and any tool that supports custom OpenAI endpoints.
 
 ## Requirements
 
@@ -83,16 +83,16 @@ pip install -e .
 
 ```bash
 # 1. Build the inference engine (one-time)
-bitnet-hub setup
+bithub setup
 
 # 2. Download a model
-bitnet-hub pull 2B-4T
+bithub pull 2B-4T
 
 # 3. Start the server
-bitnet-hub serve 2B-4T
+bithub serve 2B-4T
 
 # Or chat directly in terminal
-bitnet-hub run 2B-4T
+bithub run 2B-4T
 ```
 
 ## Roadmap

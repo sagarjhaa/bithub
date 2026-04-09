@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "bitnet-hub"
+name = "bithub"
 version = "0.1.0"
 description = "The missing friendly interface for BitNet inference. Ollama for 1-bit LLMs."
 readme = "README.md"
@@ -18,15 +18,41 @@ dependencies = [
     "httpx>=0.24.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "pytest-cov>=4.0",
+    "mypy>=1.0",
+    "ruff>=0.4",
+]
+
 [project.scripts]
-bitnet-hub = "bitnet_hub.cli:cli"
+bithub = "bithub.cli:cli"
 
 [project.urls]
-Homepage = "https://github.com/YOUR_USERNAME/bitnet-hub"
-Issues = "https://github.com/YOUR_USERNAME/bitnet-hub/issues"
+Homepage = "https://github.com/sagarjhaa/bithub"
+Issues = "https://github.com/sagarjhaa/bithub/issues"
 
 [tool.setuptools.packages.find]
-include = ["bitnet_hub*"]
+include = ["bithub*"]
 
 [tool.setuptools.package-data]
-bitnet_hub = ["registry.json"]
+bithub = ["registry.json"]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

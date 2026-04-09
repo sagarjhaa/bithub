@@ -1,14 +1,14 @@
-"""Paths and configuration for bitnet-hub."""
+"""Paths and configuration for bithub."""
 
 import os
 import platform
 from pathlib import Path
 
-# Default home directory: ~/.bitnet-hub
-BITNET_HUB_HOME = Path(os.environ.get("BITNET_HUB_HOME", Path.home() / ".bitnet-hub"))
-MODELS_DIR = BITNET_HUB_HOME / "models"
-BITNET_CPP_DIR = BITNET_HUB_HOME / "bitnet.cpp"
-DB_PATH = BITNET_HUB_HOME / "models.json"
+# Default home directory: ~/.bithub
+BITHUB_HOME = Path(os.environ.get("BITHUB_HOME", Path.home() / ".bithub"))
+MODELS_DIR = BITHUB_HOME / "models"
+BITNET_CPP_DIR = BITHUB_HOME / "bitnet.cpp"
+DB_PATH = BITHUB_HOME / "models.json"
 
 # Server defaults
 DEFAULT_HOST = "127.0.0.1"
@@ -36,11 +36,11 @@ def get_system_info() -> dict:
         "arch": platform.machine(),
         "python": platform.python_version(),
         "cpu_cores": os.cpu_count() or "unknown",
-        "home": str(BITNET_HUB_HOME),
+        "home": str(BITHUB_HOME),
     }
 
 
 def ensure_dirs():
     """Create required directories if they don't exist."""
-    BITNET_HUB_HOME.mkdir(parents=True, exist_ok=True)
+    BITHUB_HOME.mkdir(parents=True, exist_ok=True)
     MODELS_DIR.mkdir(parents=True, exist_ok=True)

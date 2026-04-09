@@ -1,5 +1,5 @@
 """
-OpenAI-compatible API layer for bitnet-hub.
+OpenAI-compatible API layer for bithub.
 
 Wraps the bitnet.cpp inference engine behind a FastAPI server that
 speaks the OpenAI Chat Completions protocol. Any app that works with
@@ -27,10 +27,10 @@ from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field
 from rich.console import Console
 
-from bitnet_hub.builder import get_server_binary, get_inference_binary, is_bitnet_cpp_built
-from bitnet_hub.config import DEFAULT_HOST, DEFAULT_PORT
-from bitnet_hub.downloader import get_model_gguf_path, is_model_downloaded, get_downloaded_models
-from bitnet_hub.registry import list_available_models, get_model_info
+from bithub.builder import get_server_binary, get_inference_binary, is_bitnet_cpp_built
+from bithub.config import DEFAULT_HOST, DEFAULT_PORT
+from bithub.downloader import get_model_gguf_path, is_model_downloaded, get_downloaded_models
+from bithub.registry import list_available_models, get_model_info
 
 console = Console()
 
@@ -103,7 +103,7 @@ class BackendProcess:
 
         server_bin = get_server_binary()
         if not server_bin:
-            console.print("[red]No server binary found. Run bitnet-hub setup first.[/red]")
+            console.print("[red]No server binary found. Run bithub setup first.[/red]")
             return False
 
         cmd = [
@@ -202,7 +202,7 @@ def create_app(
     global _backend
 
     app = FastAPI(
-        title="bitnet-hub",
+        title="bithub API",
         description="OpenAI-compatible API for BitNet 1-bit LLMs",
         version="0.1.0",
     )
@@ -251,7 +251,7 @@ def create_app(
                 "id": m["name"],
                 "object": "model",
                 "created": 0,
-                "owned_by": "bitnet-hub",
+                "owned_by": "bithub",
             })
 
         # Always include the currently loaded model
@@ -262,7 +262,7 @@ def create_app(
                 "id": _backend.model_name,
                 "object": "model",
                 "created": 0,
-                "owned_by": "bitnet-hub",
+                "owned_by": "bithub",
             })
 
         return {"object": "list", "data": models}

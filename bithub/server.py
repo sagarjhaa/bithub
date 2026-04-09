@@ -1,5 +1,5 @@
 """
-Server — start bitnet-hub with an OpenAI-compatible API.
+Server — start bithub with an OpenAI-compatible API.
 
 Two modes:
   1. `serve` — starts a FastAPI server that proxies to the bitnet.cpp
@@ -14,10 +14,10 @@ from pathlib import Path
 
 from rich.console import Console
 
-from bitnet_hub.builder import get_server_binary, get_inference_binary, is_bitnet_cpp_built
-from bitnet_hub.config import DEFAULT_HOST, DEFAULT_PORT
-from bitnet_hub.downloader import get_model_gguf_path, is_model_downloaded
-from bitnet_hub.registry import get_model_info
+from bithub.builder import get_server_binary, get_inference_binary, is_bitnet_cpp_built
+from bithub.config import DEFAULT_HOST, DEFAULT_PORT
+from bithub.downloader import get_model_gguf_path, is_model_downloaded
+from bithub.registry import get_model_info
 
 console = Console()
 
@@ -29,12 +29,12 @@ def _preflight_check(model_name: str) -> Path:
     """
     if not is_bitnet_cpp_built():
         console.print("[red]bitnet.cpp is not built yet.[/red]")
-        console.print("Run [bold]bitnet-hub setup[/bold] first to clone and build the engine.")
+        console.print("Run [bold]bithub setup[/bold] first to clone and build the engine.")
         raise SystemExit(1)
 
     if not is_model_downloaded(model_name):
         console.print(f"[red]Model {model_name} is not downloaded.[/red]")
-        console.print(f"Run [bold]bitnet-hub pull {model_name}[/bold] first.")
+        console.print(f"Run [bold]bithub pull {model_name}[/bold] first.")
         raise SystemExit(1)
 
     gguf_path = get_model_gguf_path(model_name)
@@ -53,7 +53,7 @@ def start_server(
     context_size: int = 2048,
 ) -> None:
     """
-    Start the bitnet-hub API server (FastAPI + bitnet.cpp backend).
+    Start the bithub API server (FastAPI + bitnet.cpp backend).
 
     This provides OpenAI-compatible endpoints:
         GET  /v1/models
@@ -73,7 +73,7 @@ def start_server(
     info = get_model_info(model_name)
     display_name = info["name"] if info else model_name
 
-    console.print(f"\n[bold green]Starting bitnet-hub server[/bold green]")
+    console.print(f"\n[bold green]Starting bithub server[/bold green]")
     console.print(f"  Model:    {display_name}")
     console.print(f"  GGUF:     {gguf_path.name}")
     console.print(f"  Address:  http://{host}:{port}")
@@ -94,7 +94,7 @@ def start_server(
     backend_port = port + 1
 
     # Create and run the FastAPI app
-    from bitnet_hub.api import create_app
+    from bithub.api import create_app
     import uvicorn
 
     app = create_app(

@@ -12,7 +12,7 @@ from pathlib import Path
 
 from rich.console import Console
 
-from bitnet_hub.config import BITNET_CPP_DIR, ensure_dirs
+from bithub.config import BITNET_CPP_DIR, ensure_dirs
 
 console = Console()
 

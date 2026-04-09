@@ -1,7 +1,7 @@
 """
 Model downloader — pull BitNet GGUF models from HuggingFace.
 
-Downloads into ~/.bitnet-hub/models/<model_name>/ with progress bars.
+Downloads into ~/.bithub/models/<model_name>/ with progress bars.
 Uses huggingface_hub for reliable, resumable downloads.
 """
 
@@ -25,8 +25,8 @@ from rich.progress import (
     TimeRemainingColumn,
 )
 
-from bitnet_hub.config import MODELS_DIR, ensure_dirs
-from bitnet_hub.registry import get_model_info
+from bithub.config import MODELS_DIR, ensure_dirs
+from bithub.registry import get_model_info
 
 console = Console()
 
@@ -132,7 +132,7 @@ def download_model(model_name: str, force: bool = False) -> Path:
     info = get_model_info(model_name)
     if not info:
         console.print(f"[red]Unknown model: {model_name}[/red]")
-        console.print("Run [bold]bitnet-hub models[/bold] to see available models.")
+        console.print("Run [bold]bithub models[/bold] to see available models.")
         raise SystemExit(1)
 
     model_dir = MODELS_DIR / model_name

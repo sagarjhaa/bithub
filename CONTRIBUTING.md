@@ -1,4 +1,4 @@
-# Contributing to bitnet-hub
+# Contributing to bithub
 
 Thanks for your interest in contributing! This project is in early development and help is very welcome.
 
@@ -14,7 +14,7 @@ pip install -e .
 
 ```
 bithub/
-├── bitnet_hub/
+├── bithub/
 │   ├── __init__.py          # Package version
 │   ├── cli.py               # Click CLI commands
 │   ├── config.py            # Paths, defaults, system detection
@@ -32,7 +32,7 @@ bithub/
 
 ## Architecture
 
-bitnet-hub is a CLI wrapper around Microsoft's bitnet.cpp engine. The flow is:
+bithub is a CLI wrapper around Microsoft's bitnet.cpp engine. The flow is:
 
 1. **Registry** (`registry.json`) — catalog of known BitNet models on HuggingFace
 2. **Downloader** (`downloader.py`) — pulls GGUF files from HuggingFace via `huggingface_hub`
@@ -44,7 +44,7 @@ bitnet-hub is a CLI wrapper around Microsoft's bitnet.cpp engine. The flow is:
 - **Testing on different platforms** — macOS (Apple Silicon + Intel), Linux, Windows/WSL
 - **Model validation** — confirming all registry entries point to valid HuggingFace repos
 - **New models** — adding new BitNet-compatible models to `registry.json`
-- **Docker support** — packaging bitnet-hub with pre-built binaries
+- **Docker support** — packaging bithub with pre-built binaries
 - **Pre-built binaries** — shipping compiled bitnet.cpp so users skip the build step
 
 ## Guidelines
@@ -58,7 +58,7 @@ bitnet-hub is a CLI wrapper around Microsoft's bitnet.cpp engine. The flow is:
 ## Adding a New Model
 
 1. Find the model on HuggingFace (must have a `.gguf` file)
-2. Add an entry to `bitnet_hub/registry.json`:
+2. Add an entry to `bithub/registry.json`:
    ```json
    "short-name": {
      "name": "Full-Model-Name",
@@ -69,14 +69,14 @@ bitnet-hub is a CLI wrapper around Microsoft's bitnet.cpp engine. The flow is:
      "size_mb": 1800
    }
    ```
-3. Test with `bitnet-hub pull short-name`
+3. Test with `bithub pull short-name`
 
 ## Submitting a PR
 
 1. Fork the repo
 2. Create a branch (`git checkout -b feature/my-change`)
 3. Make your changes
-4. Test locally (`pip install -e . && bitnet-hub models`)
+4. Test locally (`pip install -e . && bithub models`)
 5. Submit a PR with a clear description of what and why
 
 Thank you!
