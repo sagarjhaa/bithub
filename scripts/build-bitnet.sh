@@ -61,7 +61,7 @@ if [ -f "setup_env.py" ]; then
 
     echo "    Patching cmake flags: ${EXTRA_FLAGS}"
     sed -i.bak3 \
-        "s|\"-DCMAKE_CXX_COMPILER=|${ARCH_CMAKE_FLAG}\"-DCMAKE_CXX_FLAGS=${EXTRA_FLAGS}\", \"-DCMAKE_C_FLAGS=${EXTRA_FLAGS}\", \"-DCMAKE_CXX_COMPILER=|" \
+        "s|\"-DCMAKE_CXX_COMPILER=|${ARCH_CMAKE_FLAG}\"-DBUILD_SHARED_LIBS=OFF\", \"-DCMAKE_CXX_FLAGS=${EXTRA_FLAGS}\", \"-DCMAKE_C_FLAGS=${EXTRA_FLAGS}\", \"-DCMAKE_CXX_COMPILER=|" \
         setup_env.py
 
     # Skip model download in CI
