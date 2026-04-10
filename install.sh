@@ -121,7 +121,7 @@ main() {
     fi
     
     "$venv_dir/bin/pip" install --upgrade pip --quiet
-    "$venv_dir/bin/pip" install bithub || error "Failed to install bithub via pip"
+    "$venv_dir/bin/pip" install --upgrade bithub || error "Failed to install bithub via pip"
 
     # Link the executable
     mkdir -p "$HOME/.local/bin"
