@@ -314,6 +314,67 @@ def models():
 
 
 @cli.command()
+@click.argument("query")
+@click.option("--limit", default=15, help="Number of results to show")
+def search(query, limit):
+    """Search Hugging Face for 1.58-bit models.
+
+    Checks if results are compatible with the BitNet engine.
+    """
+    from huggingface_hub import HfApi
+    from rich.table import Table
+
+    console.print(f"\n[dim]Searching HuggingFace for '{query}'...[/dim]")
+
+    try:
+        api = HfApi()
+        # Fetch search results sorted by downloads
+        models_data = list(api.list_models(
+            search=query,
+            sort="downloads",
+            direction=-1,
+            limit=limit * 3  # Fetch extra to filter
+        ))
+    except Exception as e:
+        console.print(f"[red]Search failed: {e}[/red]")
+        raise SystemExit(1)
+
+    table = Table(title=f"Search Results for '{query}'")
+    table.add_column("Repository", style="bold cyan")
+    table.add_column("Downloads", justify="right")
+    table.add_column("Compatible?", justify="center")
+
+    shown = 0
+    for m in models_data:
+        tags = [t.lower() for t in (m.tags or [])]
+        name = m.id.lower()
+
+        # Heuristic 1.58-bit / bitnet compatibility detection
+        is_compatible = False
+        if "bitnet" in tags or "1.58bit" in tags or "1.58-bit" in tags:
+            is_compatible = True
+        elif "1.58" in name or "bitnet" in name or "i2_s" in name:
+            is_compatible = True
+        # If it's a known non-quantized repo with 1.58bit, we allow testing it
+        # However if it explicitly doesn't have gguf/i2_s we can't definitively say
+
+        comp_str = "[green]Yes[/green]" if is_compatible else "[dim]Unknown[/dim]"
+
+        table.add_row(m.id, f"{m.downloads:,}", comp_str)
+        shown += 1
+        if shown >= limit:
+            break
+
+    if shown == 0:
+        console.print(f"[yellow]No models found matching '{query}'.[/yellow]")
+        return
+
+    console.print(table)
+    console.print("\n  [dim]To test a compatible model, use the direct pull tag:[/dim]")
+    console.print("  [bold]bithub pull hf:<repository>[/bold]\n")
+
+
+@cli.command()
 @click.argument("model_name")
 @click.option("--yes", "-y", is_flag=True, help="Skip confirmation")
 def rm(model_name, yes):
